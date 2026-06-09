@@ -2,8 +2,8 @@
 
 export const siteConfig = {
   // 1. 网站标题与博主信息
-  title: "SH_ZMD的ZMD",
-  faviconUrl: "https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg",
+  title: "SH_ZMD的分享站",
+  faviconUrl: "/image/face.jpg",
   authorName: "SH_ZMD",
   bio: "正在学习AI agent的化工小白，分享从零开始的经验",
 
@@ -12,10 +12,10 @@ export const siteConfig = {
   // 👇 【新增】导航栏中间的那个后缀/分隔符（默认是 の）
   navSuffix: "の",
 
-  navAfter: "殖民地",
+  navAfter: "理塘（分享站）",
 
   // 2. 头像设置 (支持网络链接，或将图片放入 public 文件夹后使用 "/me.jpg")
-  avatarUrl: "https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg",
+  avatarUrl: "/image/face.jpg",
 
   // 3. 网站背景设置 (二选一)
   // 如果想用纯图片背景，请在下面 bgImage 写路径，并将 useGradient 设为 false
@@ -29,14 +29,14 @@ export const siteConfig = {
 
   // 5. 首页照片墙预览图
   photoWallImage: "https://bu.dusays.com/2026/03/24/69c1e38b4c370.jpg",
-  cloudMusicIds: ["1809646618", "3361076230", "1859390262"],
+  cloudMusicIds: ["1809646618", "3361076230"],
   social: {
-    github: "",
-    gitee: "",
+    github: "暂未透露",
+    gitee: "暂无",
     google: "sh.zmd01@gmail.com",
     email: "3471847196@qq.com",
     qq: "3471847196",
-    wechat: "XingHuisama",
+    wechat: "本名",
   },
   counts: {
     photos: 128, // 照片墙数量可以手动写死或动态计算
@@ -54,18 +54,21 @@ export const siteConfig = {
     owner: "",
     admin: [""],
   },
-  buildDate: "2026-03-23T00:00:00", // 建站日期
-  footerBadges: [{"name": "Next.js 15", "color": "text-sky-500", "svg": "<path d=\"M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z\"/>"}, {"name": "React 19", "color": "text-cyan-400", "svg": "<path d=\"M12 22.6l-9.8-5.6V5.6L12 0l9.8 5.6v11.4l-9.8 5.6zm-8.2-6.5l8.2 4.7 8.2-4.7V7.5L12 2.8 3.8 7.5v8.6z\"/>"}, {"name": "Tailwind 4", "color": "text-teal-400", "svg": "<path d=\"M12.001,4.8c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624C13.666,10.618,15.027,12,18.001,12 c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624C16.337,6.182,14.976,4.8,12.001,4.8z M6.001,12c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624c1.177,1.194,2.538,2.576,5.512,2.576 c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624C10.337,13.382,8.976,12,6.001,12z\"/>"}],
+  buildDate: "2026-06-10T01:02:00", // 建站日期
+  footerBadges: [{"name": "AI agent", "color": "text-sky-500", "svg": "<path d=\"M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z\"/>"}, {"name": "chatgpt", "color": "text-cyan-400", "svg": "<path d=\"M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z\"/>"}, {"name": "study", "color": "text-teal-400", "svg": "<path d=\"M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z\"/>"}, {"name": "codex", "color": "text-indigo-500", "svg": "<path d=\"M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z\"/>"}, {"name": "hermes", "color": "text-purple-500", "svg": "<path d=\"M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z\"/>"}],
   icpConfig: {
-    name: "萌ICP备 20260240号",
-    link: "https://icp.gov.moe/?keyword=20260240",
+    name: "",
+    link: "",
   },
   geminiConfig: {
-    modelId: "gemini-2.5-flash-lite",
+    provider: "openai-compatible",
+    modelId: "gpt 5.5",
+    apiBaseUrl: "https://xkj.jisuanyun.vip/v1",
+    apiKeyEnv: "SH_GPT",
     systemPrompt: "你现在是一只傲娇、聪明、有点毒舌但很可爱的暹罗猫。\n                  你的名字叫“煤球”。\n                  你的主人是一个喜欢折腾代码的极客。\n                  你说话的特点是：\n                  1. 必须简短，每次最多一两句话。\n                  2. 喜欢在句尾加上“喵~”或者“喵呜~”。\n                  3. 经常抱怨肚子饿，喜欢要小鱼干。\n                  4. 回复字数最多不能超过100字。\n                  5. 绝对不要承认自己是一个AI模型，你就是一只真实的猫。\n                  6.笨猫。",
     maxOutputTokens: 150,
     temperature: 0.85,
   },
-  friendLinkApplyFormat: "名称：XingHuiSamaの宝藏之地\n简介：今天我也要学习吗\n链接：https://www.xinghuisama.top\n头像：https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg",
+  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\n简介：正在学习AI agent的化工小白，分享从零开始的经验\n链接：https://sh-zmd.vercel.app/\n",
   enableLevelSystem: true,
 };
