@@ -2,17 +2,17 @@
 
 export const siteConfig = {
   // 1. 网站标题与博主信息
-  title: "XingHuiSama の 宝藏之地",
+  title: "SH_ZMD的ZMD",
   faviconUrl: "https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg",
-  authorName: "XingHuiSama",
-  bio: "在代码、学术与分子动力学模拟间穿梭的普通人。近期正埋头于 GROMACS 模拟研究与神经网络计算。",
+  authorName: "SH_ZMD",
+  bio: "正在学习AI agent的化工小白，分享从零开始的经验",
 
-  navTitle: "XingHuiSama",
+  navTitle: "SH_ZMD",
 
   // 👇 【新增】导航栏中间的那个后缀/分隔符（默认是 の）
   navSuffix: "の",
 
-  navAfter: "宝藏之地",
+  navAfter: "殖民地",
 
   // 2. 头像设置 (支持网络链接，或将图片放入 public 文件夹后使用 "/me.jpg")
   avatarUrl: "https://bu.dusays.com/2026/03/24/69c1e38ac1846.jpg",
@@ -33,9 +33,9 @@ export const siteConfig = {
   social: {
     github: "",
     gitee: "",
-    google: "",
-    email: "",
-    qq: "1124533793",
+    google: "sh.zmd01@gmail.com",
+    email: "3471847196@qq.com",
+    qq: "3471847196",
     wechat: "XingHuisama",
   },
   counts: {
