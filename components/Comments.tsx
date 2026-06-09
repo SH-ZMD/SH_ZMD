@@ -1,109 +1,129 @@
 "use client";
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import 'gitalk/dist/gitalk.css';
-import Gitalk from 'gitalk';
 
-// 🌟 引入全局配置，读取你的 GitHub OAuth 凭证
-import { siteConfig } from '../siteConfig'; // 如果路径报错，请检查层级是否需要改成 '../../siteConfig'
+type CommentItem = {
+  id: string;
+  author: string;
+  content: string;
+  createdAt: string;
+};
 
 export default function Comments() {
-  const containerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
+  const pageId = useMemo(() => pathname.replace(/\/$/, '') || '/', [pathname]);
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [author, setAuthor] = useState('');
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const loadComments = async () => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const res = await fetch(`/api/comments?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '留言读取失败');
+      setComments(data.comments || []);
+    } catch (error: any) {
+      setMessage(error.message || '留言读取失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    loadComments();
+  }, [pageId]);
 
-    // 清空之前的评论区（防止 Next.js 路由切换时重复渲染）
-    containerRef.current.innerHTML = '';
-
-    const gitalk = new Gitalk({
-      clientID: siteConfig.gitalkConfig.clientID,
-      clientSecret: siteConfig.gitalkConfig.clientSecret,
-      repo: siteConfig.gitalkConfig.repo,
-      owner: siteConfig.gitalkConfig.owner,
-      admin: siteConfig.gitalkConfig.admin,
-
-      // 👇 指向我们自己的同源 API，彻底告别跨域和第三方拦截！
-      proxy: '/api/github',
-
-      id: (pathname.replace(/\/$/, '') || '/').substring(0, 49),
-      distractionFreeMode: false,
-    });
-
-    gitalk.render(containerRef.current);
-
-    // 👇 🌟 核心修复：擦除 URL 中的 OAuth 凭证，防止注销后二次登录失败
-    const url = new URL(window.location.href);
-    if (url.searchParams.has('code')) {
-      url.searchParams.delete('code');
-      // 使用 replaceState 无痕修改地址栏，页面不会刷新，也不会留下历史记录
-      window.history.replaceState({}, document.title, url.toString());
+  const submitComment = async () => {
+    const cleanAuthor = author.trim() || '路过的朋友';
+    const cleanContent = content.trim();
+    if (!cleanContent) {
+      setMessage('先写点内容再发送吧。');
+      return;
     }
 
-  }, [pathname]);
+    setSubmitting(true);
+    setMessage('');
+    try {
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '发送失败');
+      setContent('');
+      setAuthor('');
+      setComments((prev) => [data.comment, ...prev].filter(Boolean));
+      setMessage('留言已送达。');
+    } catch (error: any) {
+      setMessage(error.message || '发送失败');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
-    <div className="w-full mt-16 relative">
-      {/* 🌟 视觉特效：底部环境光晕（保留氛围感） */}
+    <div className="w-full mt-12 relative">
       <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full pointer-events-none z-0"></div>
 
-      {/* 🌟 Gitalk 容器：加入了优雅的顶部细边框，配合 custom-gitalk-glass 类名渲染毛玻璃 */}
-      <div ref={containerRef} className="relative z-10 custom-gitalk-glass pt-6 border-t border-slate-200/50 dark:border-slate-700/50" />
+      <div className="relative z-10 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
+        <div className="grid grid-cols-1 gap-4">
+          <input
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+            placeholder="昵称（可不填）"
+            className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+          />
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="不用登录 GitHub，直接写留言就行。"
+            rows={4}
+            className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none resize-y focus:ring-2 focus:ring-indigo-500/50"
+          />
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {message || '支持 Markdown；留言会先保存到站点留言箱。'}
+            </p>
+            <button
+              onClick={submitComment}
+              disabled={submitting}
+              className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
+            >
+              {submitting ? '发送中...' : '发送留言'}
+            </button>
+          </div>
+        </div>
 
-      {/* 🌟 毛玻璃样式魔改核心 (覆盖 Gitalk 默认样式) */}
-      <style jsx global>{`
-        .custom-gitalk-glass .gt-container .gt-header-textarea {
-          background: rgba(255, 255, 255, 0.1) !important;
-          backdrop-filter: blur(12px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.2) !important;
-          border-radius: 16px !important;
-          color: inherit !important;
-          transition: all 0.3s ease;
-        }
-        .custom-gitalk-glass .gt-container .gt-header-textarea:focus {
-          background: rgba(255, 255, 255, 0.2) !important;
-          border-color: #6366f1 !important; /* Indigo 500 */
-          box-shadow: 0 0 15px rgba(99, 102, 241, 0.3) !important;
-        }
-        .custom-gitalk-glass .gt-container .gt-header-preview {
-          background: rgba(255, 255, 255, 0.1) !important;
-          backdrop-filter: blur(12px) !important;
-          border-radius: 16px !important;
-        }
-        .custom-gitalk-glass .gt-container .gt-btn {
-          background: #6366f1 !important;
-          border: none !important;
-          border-radius: 12px !important;
-          box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4) !important;
-          transition: transform 0.2s, box-shadow 0.2s;
-          color: white !important;
-        }
-        .custom-gitalk-glass .gt-container .gt-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6) !important;
-        }
-        .custom-gitalk-glass .gt-container .gt-comment-content {
-          background: rgba(255, 255, 255, 0.05) !important;
-          backdrop-filter: blur(8px) !important;
-          border: 1px solid rgba(255, 255, 255, 0.1) !important;
-          border-radius: 16px !important;
-        }
-        .custom-gitalk-glass .gt-container .gt-comment-admin .gt-comment-content {
-          border-color: rgba(99, 102, 241, 0.3) !important;
-        }
-        .custom-gitalk-glass .gt-container .gt-avatar {
-          border-radius: 50% !important;
-          overflow: hidden;
-        }
-        .custom-gitalk-glass .gt-container .gt-comment-body {
-          color: inherit !important;
-        }
-        .custom-gitalk-glass .gt-container a {
-          color: #6366f1 !important;
-        }
-      `}</style>
+        <div className="mt-8 space-y-4">
+          {loading && <p className="text-center text-sm text-slate-500">正在读取留言...</p>}
+          {!loading && comments.length === 0 && (
+            <p className="text-center text-sm text-slate-500">还没有留言，来当第一个吧。</p>
+          )}
+          {comments.map((comment) => (
+            <article
+              key={comment.id}
+              className="rounded-2xl bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-slate-700/60 p-4 backdrop-blur-xl"
+            >
+              <div className="flex items-center justify-between gap-4 mb-2">
+                <span className="text-sm font-black text-slate-800 dark:text-slate-100">{comment.author}</span>
+                <time className="text-[11px] text-slate-400">
+                  {new Date(comment.createdAt).toLocaleString('zh-CN')}
+                </time>
+              </div>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
+                {comment.content}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
