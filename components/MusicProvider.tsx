@@ -58,6 +58,7 @@ interface MusicContextType {
   setVolume: (value: number) => void;
   toggleMute: () => void;
   togglePlayMode: () => void;
+  selectSong: (index: number) => void;
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
@@ -91,7 +92,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         );
         const results = await Promise.all(fetchPromises);
 
-        const mergedPlaylist = results
+        const neteasePlaylist = results
           .filter(res => res && res.length > 0)
           .map(res => ({
             id: res[0].id || Math.random().toString(),
@@ -104,6 +105,20 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           }))
           .filter(song => song.src);
 
+        const customPlaylist = ((siteConfig as any).customMusic || [])
+          .filter((song: any) => song && song.src)
+          .map((song: any, index: number) => ({
+            id: song.id || `custom_${index}`,
+            title: song.title || '自定义音频',
+            artist: song.artist || '自定义音频',
+            cover: song.cover || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
+            src: song.src,
+            lrc: song.lrc || '',
+            lyrics: song.lrc ? parseLrc(song.lrc) : []
+          }));
+
+        const mergedPlaylist = [...neteasePlaylist, ...customPlaylist];
+
         if (isMounted) {
           if (mergedPlaylist.length > 0) setPlaylist(mergedPlaylist);
           else setCurrentLyric("云端链路受阻");
@@ -114,7 +129,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    if (siteConfig.cloudMusicIds?.length > 0) fetchMusicData();
+    if (siteConfig.cloudMusicIds?.length > 0 || ((siteConfig as any).customMusic || []).length > 0) fetchMusicData();
     else setIsLoading(false);
 
     return () => { isMounted = false; };
@@ -127,7 +142,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     setLyrics([]);
     setCurrentLyric("♪ 正在缓冲 ♪");
 
-    if (currentSong.lrcUrl) {
+    if (currentSong.lrc) {
+      const parsed = parseLrc(currentSong.lrc);
+      setLyrics(parsed);
+      setPlaylist(prev => {
+        const newPlaylist = [...prev];
+        newPlaylist[currentIndex].lyrics = parsed;
+        return newPlaylist;
+      });
+    } else if (currentSong.lrcUrl) {
       fetch(currentSong.lrcUrl)
         .then(res => res.text())
         .then(text => {
@@ -248,7 +271,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         playlist, currentIndex, currentSong, isPlaying, progress, currentTime, duration, currentLyric, isLoading,
         volume, isMuted, playMode, // 暴露新状态
         togglePlay, nextSong, prevSong, handleSeek,
-        playSong, setVolume, toggleMute, togglePlayMode // 暴露新方法
+        playSong, selectSong: playSong, setVolume, toggleMute, togglePlayMode // 暴露新方法
     }}>
       {children}
       {currentSong && (
