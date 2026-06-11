@@ -115,13 +115,26 @@ export default function MusicClient() {
     );
   }, [playlist, searchQuery]);
 
-  if (isLoading || !currentSong) {
+  if (isLoading) {
     return (
       <div className="min-h-screen relative pb-32 flex flex-col">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center animate-pulse gap-4">
           <Disc3 size={48} className="text-indigo-500 animate-spin" />
           <span className="font-black text-slate-500 tracking-widest text-sm">唤醒音频引擎中...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentSong) {
+    return (
+      <div className="min-h-screen relative pb-32 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
+          <Disc3 size={48} className="text-slate-400" />
+          <span className="font-black text-slate-600 dark:text-slate-300 tracking-widest text-sm">没有加载到可播放歌曲</span>
+          <p className="text-xs text-slate-500 max-w-md leading-relaxed">可能是网易云歌曲解析接口暂时不可用，或者新增的歌曲没有可播放音频地址。请删掉失败的 ID，或稍后再试。</p>
         </div>
       </div>
     );

@@ -83,13 +83,24 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    const fetchSong = async (id: string) => {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const res = await fetch(`https://api.injahow.cn/meting/?server=netease&type=song&id=${id}`, {
+          signal: controller.signal,
+        });
+        return await res.json();
+      } catch {
+        return null;
+      } finally {
+        window.clearTimeout(timer);
+      }
+    };
+
     const fetchMusicData = async () => {
       try {
-        const fetchPromises = siteConfig.cloudMusicIds.map(id =>
-          fetch(`https://api.injahow.cn/meting/?server=netease&type=song&id=${id}`)
-            .then(res => res.json())
-            .catch(() => null)
-        );
+        const fetchPromises = (siteConfig.cloudMusicIds || []).map(id => fetchSong(String(id)));
         const results = await Promise.all(fetchPromises);
 
         const neteasePlaylist = results

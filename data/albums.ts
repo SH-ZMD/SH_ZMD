@@ -33,10 +33,6 @@ export const albums: Album[] = [
         "caption": ""
       },
       {
-        "url": "/image/pasted-1781101448936-afadaf.png",
-        "caption": ""
-      },
-      {
         "url": "/image/pasted-1781101448981-d0aa9b.png",
         "caption": ""
       },
@@ -70,10 +66,6 @@ export const albums: Album[] = [
       },
       {
         "url": "/image/pasted-1781101449227-00e6c2.png",
-        "caption": ""
-      },
-      {
-        "url": "/image/pasted-1781101449255-214922.png",
         "caption": ""
       },
       {
@@ -137,14 +129,6 @@ export const albums: Album[] = [
         "caption": ""
       },
       {
-        "url": "/image/pasted-1781101449811-4bd72f.png",
-        "caption": ""
-      },
-      {
-        "url": "/image/pasted-1781101449854-a1c371.png",
-        "caption": ""
-      },
-      {
         "url": "/image/pasted-1781101449888-ccbc89.png",
         "caption": ""
       },
@@ -170,10 +154,6 @@ export const albums: Album[] = [
       },
       {
         "url": "/image/pasted-1781101264832-0a5b42.png",
-        "caption": ""
-      },
-      {
-        "url": "/image/pasted-1781101264844-7f22bb.png",
         "caption": ""
       }
     ],
