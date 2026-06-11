@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { MapPin, MessageSquare, Clock, Sparkles, Search, ArrowDownAZ, ArrowUpZA, ChevronLeft, ChevronRight, Ghost } from 'lucide-react';
-import MomentComments from '../../components/MomentComments';
+import MomentCommentsSimple from '../../components/MomentCommentsSimple';
 
 function timeAgo(dateStr: string) {
   const date = new Date(dateStr);
@@ -134,7 +134,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1, marginTop: 16 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl md:rounded-3xl p-4 md:p-6 border border-slate-200/50 dark:border-slate-700/50 relative shadow-inner">
               <div className="absolute -top-2 right-6 md:right-8 w-4 h-4 bg-slate-50/50 dark:bg-slate-900/50 rotate-45 border-l border-t border-slate-200/50"></div>
-              <MomentComments id={`/moments/${moment.id}`} />
+              <MomentCommentsSimple id={moment.id} path={`/moments/${moment.id}`} />
             </div>
           </motion.div>
         )}
