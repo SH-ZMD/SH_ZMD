@@ -123,11 +123,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         });
         if (localRes.ok) return await localRes.json();
 
-        const res = await fetch(`https://api.injahow.cn/meting/?server=netease&type=song&id=${id}`, {
-          signal: controller.signal,
-        });
-        const data = await res.json();
-        return Array.isArray(data) ? normalizeSong(data[0], id) : normalizeSong(data, id);
+        return null;
       } catch {
         return null;
       } finally {
