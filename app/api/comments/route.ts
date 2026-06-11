@@ -39,6 +39,23 @@ async function findIssue(pageId: string) {
   return data.items?.find((item: any) => item.title === title) || null;
 }
 
+async function findCommentIssues() {
+  const query = encodeURIComponent(`repo:${OWNER}/${REPO} in:title "[site-comment]" type:issue`);
+  const res = await fetch(`https://api.github.com/search/issues?q=${query}&sort=updated&order=desc&per_page=30`, {
+    headers: githubHeaders(),
+    cache: 'no-store',
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || '读取留言提醒失败');
+  }
+
+  return Array.isArray(data.items)
+    ? data.items.filter((item: any) => typeof item.title === 'string' && item.title.startsWith('[site-comment] '))
+    : [];
+}
+
 async function createIssue(pageId: string) {
   if (!TOKEN) {
     throw new Error('留言功能还缺 COMMENT_GITHUB_TOKEN 环境变量。');
@@ -76,9 +93,58 @@ function parseComment(body: string) {
   };
 }
 
+function pageIdFromIssueTitle(title: string) {
+  return title.replace(/^\[site-comment\]\s*/, '').trim() || '/';
+}
+
+async function listRecentComments() {
+  const issues = await findCommentIssues();
+  const groups = await Promise.all(
+    issues.map(async (issue: any) => {
+      if (!issue.comments_url || !issue.comments) return [];
+
+      const lastPage = Math.max(1, Math.ceil(Number(issue.comments || 0) / 20));
+      const res = await fetch(`${issue.comments_url}?per_page=20&page=${lastPage}`, {
+        headers: githubHeaders(),
+        cache: 'no-store',
+      });
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data)) return [];
+
+      const pageId = pageIdFromIssueTitle(issue.title || '');
+      return data.map((item: any) => {
+        const parsed = parseComment(item.body || '');
+        return {
+          id: String(item.id),
+          pageId,
+          pageUrl: pageId.startsWith('/') ? pageId : `/${pageId}`,
+          author: parsed.author,
+          content: parsed.content,
+          createdAt: item.created_at,
+        };
+      });
+    })
+  );
+
+  const comments = groups
+    .flat()
+    .filter((comment: any) => comment.createdAt)
+    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return {
+    total: comments.length,
+    latestAt: comments[0]?.createdAt || null,
+    comments: comments.slice(0, 30),
+  };
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    if (searchParams.get('summary') === '1') {
+      return NextResponse.json(await listRecentComments());
+    }
+
     const pageId = normalizePageId(searchParams.get('pageId') || '/');
     const issue = await findIssue(pageId);
 

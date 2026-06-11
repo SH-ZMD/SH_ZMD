@@ -62,6 +62,36 @@ interface MusicContextType {
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
+const MUSIC_CACHE_KEY = `xh-music-playlist-${(siteConfig.cloudMusicIds || []).join('-')}-${(((siteConfig as any).customMusic || []).length)}`;
+
+function normalizeSong(song: any, fallbackId: string) {
+  return {
+    id: String(song?.id || fallbackId),
+    title: song?.title || song?.name || '未知歌曲',
+    artist: song?.artist || song?.author || '未知歌手',
+    cover: song?.cover || song?.pic || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
+    src: song?.src || song?.url || '',
+    lrcUrl: song?.lrcUrl || song?.lrc || '',
+    lyrics: Array.isArray(song?.lyrics) ? song.lyrics : []
+  };
+}
+
+function readCachedPlaylist() {
+  try {
+    const raw = window.localStorage.getItem(MUSIC_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((song: any) => song?.src) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedPlaylist(list: any[]) {
+  try {
+    if (list.length > 0) window.localStorage.setItem(MUSIC_CACHE_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const [playlist, setPlaylist] = useState<any[]>([]);
@@ -87,10 +117,17 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       const controller = new AbortController();
       const timer = window.setTimeout(() => controller.abort(), 8000);
       try {
+        const localRes = await fetch(`/api/music/resolve?id=${encodeURIComponent(id)}`, {
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+        if (localRes.ok) return await localRes.json();
+
         const res = await fetch(`https://api.injahow.cn/meting/?server=netease&type=song&id=${id}`, {
           signal: controller.signal,
         });
-        return await res.json();
+        const data = await res.json();
+        return Array.isArray(data) ? normalizeSong(data[0], id) : normalizeSong(data, id);
       } catch {
         return null;
       } finally {
@@ -100,20 +137,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
     const fetchMusicData = async () => {
       try {
+        const cachedPlaylist = readCachedPlaylist();
+        if (cachedPlaylist.length > 0 && isMounted) {
+          setPlaylist(cachedPlaylist);
+          setIsLoading(false);
+        }
+
         const fetchPromises = (siteConfig.cloudMusicIds || []).map(id => fetchSong(String(id)));
         const results = await Promise.all(fetchPromises);
 
         const neteasePlaylist = results
-          .filter(res => res && res.length > 0)
-          .map(res => ({
-            id: res[0].id || Math.random().toString(),
-            title: res[0].name || res[0].title || '未知歌曲',
-            artist: res[0].author || res[0].artist || '未知歌手',
-            cover: res[0].pic || res[0].cover || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
-            src: res[0].url,
-            lrcUrl: res[0].lrc,
-            lyrics: [] // 🌟 初始化时预留一个空数组
-          }))
+          .filter(res => res && (res.src || res.url))
+          .map((res, index) => normalizeSong(res, String((siteConfig.cloudMusicIds || [])[index] || Math.random())))
           .filter(song => song.src);
 
         const customPlaylist = ((siteConfig as any).customMusic || [])
@@ -131,12 +166,19 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         const mergedPlaylist = [...neteasePlaylist, ...customPlaylist];
 
         if (isMounted) {
-          if (mergedPlaylist.length > 0) setPlaylist(mergedPlaylist);
-          else setCurrentLyric("云端链路受阻");
+          if (mergedPlaylist.length > 0) {
+            setPlaylist(mergedPlaylist);
+            writeCachedPlaylist(mergedPlaylist);
+          } else if (cachedPlaylist.length === 0) {
+            setCurrentLyric("云端链路受阻");
+          }
           setIsLoading(false);
         }
       } catch (error) {
-        if (isMounted) { setCurrentLyric("网络初始化失败"); setIsLoading(false); }
+        if (isMounted) {
+          if (playlist.length === 0) setCurrentLyric("网络初始化失败");
+          setIsLoading(false);
+        }
       }
     };
 

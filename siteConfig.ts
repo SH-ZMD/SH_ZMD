@@ -29,7 +29,7 @@ export const siteConfig = {
 
   // 5. 首页照片墙预览图
   photoWallImage: "https://bu.dusays.com/2026/03/24/69c1e38b4c370.jpg",
-  cloudMusicIds: ["1809646618", "3361076230", "2162204930", "3340395159", "2738459901", "2145853736", "1955725942", "2036965945", "2132012055"],
+  cloudMusicIds: ["1809646618", "3361076230", "2162204930", "2738459901", "2145853736", "1955725942", "2036965945", "2132012055"],
   customMusic: [],
   social: {
     github: "暂未透露",
@@ -70,6 +70,6 @@ export const siteConfig = {
     maxOutputTokens: 150,
     temperature: 0.85,
   },
-  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\n简介：正在学习AI agent的化工小白，分享从零开始的经验\n链接：https://sh-zmd.vercel.app/\n",
+  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\\\n简介：正在学习AI agent的化工小白，分享从零开始的经验\\\n链接：https://sh-zmd.vercel.app/\\\n",
   enableLevelSystem: true,
 };
