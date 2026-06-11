@@ -70,6 +70,6 @@ export const siteConfig = {
     maxOutputTokens: 150,
     temperature: 0.85,
   },
-  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\\\\\n简介：正在学习AI agent的化工小白，分享从零开始的经验\\\\\n链接：https://sh-zmd.vercel.app/\\\\\n",
+  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\\\\\\\\\n简介：正在学习AI agent的化工小白，分享从零开始的经验\\\\\\\\\n链接：https://sh-zmd.vercel.app/\\\\\\\\\n",
   enableLevelSystem: true,
 };
