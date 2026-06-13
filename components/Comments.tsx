@@ -11,12 +11,42 @@ type CommentItem = {
   parentId?: string | null;
 };
 
+function withImage(content: string, imageUrl: string) {
+  const cleanContent = content.trim();
+  const cleanUrl = imageUrl.trim();
+  if (!cleanUrl) return cleanContent;
+  return `${cleanContent}${cleanContent ? '\n\n' : ''}![留言图片](${cleanUrl})`;
+}
+
+function renderCommentContent(content: string) {
+  const parts = String(content || '').split(/(!\[[^\]]*\]\([^)]+\))/g);
+  return parts.map((part, index) => {
+    const imageMatch = part.match(/^!\[[^\]]*\]\(([^)]+)\)$/);
+    if (imageMatch) {
+      return (
+        <img
+          key={index}
+          src={imageMatch[1]}
+          alt="留言图片"
+          className="mt-3 max-h-80 w-auto max-w-full rounded-2xl border border-white/30 object-contain"
+        />
+      );
+    }
+    return part ? (
+      <span key={index} className="whitespace-pre-wrap">
+        {part}
+      </span>
+    ) : null;
+  });
+}
+
 export default function Comments() {
   const pathname = usePathname();
   const pageId = useMemo(() => pathname.replace(/\/$/, '') || '/', [pathname]);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [author, setAuthor] = useState('');
   const [content, setContent] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
@@ -55,7 +85,7 @@ export default function Comments() {
 
   const submitComment = async (parentId?: string) => {
     const cleanAuthor = author.trim() || '路过的朋友';
-    const cleanContent = (parentId ? replyContent : content).trim();
+    const cleanContent = parentId ? replyContent.trim() : withImage(content, imageUrl);
     if (!cleanContent) {
       setMessage('先写点内容再发送吧。');
       return;
@@ -72,6 +102,7 @@ export default function Comments() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '发送失败');
       setContent('');
+      setImageUrl('');
       setReplyContent('');
       setReplyTarget(null);
       setAuthor('');
@@ -102,6 +133,12 @@ export default function Comments() {
             placeholder="不用登录 GitHub，直接写留言就行。"
             rows={4}
             className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none resize-y focus:ring-2 focus:ring-indigo-500/50"
+          />
+          <input
+            value={imageUrl}
+            onChange={(e) => setImageUrl(e.target.value)}
+            placeholder="图片链接（可不填，支持 jpg/png/webp/gif 直链）"
+            className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
           />
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -161,7 +198,7 @@ export default function Comments() {
                 </time>
               </div>
               <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
-                {comment.content}
+                {renderCommentContent(comment.content)}
               </p>
               <button
                 onClick={() => setReplyTarget(comment)}
@@ -180,7 +217,7 @@ export default function Comments() {
                         </time>
                       </div>
                       <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
-                        {reply.content}
+                        {renderCommentContent(reply.content)}
                       </p>
                     </div>
                   ))}
