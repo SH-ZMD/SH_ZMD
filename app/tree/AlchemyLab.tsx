@@ -7,7 +7,7 @@ import { MessageCircleHeart, ChevronLeft, ChevronRight, BookOpen, ScrollText, Co
 import { useRouter } from 'next/navigation';
 
 // 🌟 引入定制的无干扰留言板组件与站点配置
-import LabComments from '../../components/LabComments';
+import Comments from '../../components/Comments';
 import { siteConfig } from '../../siteConfig';
 
 // 🌟 引入相册与友链数据以统计徽章 (请确保路径正确，如果报错请调整 ../ 的数量)
@@ -691,7 +691,7 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
          <h2 className="text-xl font-black text-[#8b6b4a] mb-2 font-serif text-center uppercase tracking-widest border-b border-[#8b6b4a]/30 pb-4">
             「 {formattedMonth} 的访客留言簿 」
          </h2>
-         <LabComments key={`gitalk-${currentMonthStr}`} pageId={`workshop-${currentMonthStr}`} />
+         <Comments />
       </div>
 
     </motion.div>

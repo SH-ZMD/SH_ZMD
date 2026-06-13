@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
+const PRODUCTION_COMMENT_API = process.env.PRODUCTION_COMMENT_API || 'https://sh-zmd.vercel.app/api/comments';
 
 function normalizePageId(pageId: string) {
   return (pageId || '/').replace(/\s+/g, '-').slice(0, 80);
@@ -37,6 +38,21 @@ async function findIssue(pageId: string) {
 
   const data = await res.json();
   return data.items?.find((item: any) => item.title === title) || null;
+}
+
+async function proxyProductionComments(req: Request, init?: RequestInit) {
+  const incomingUrl = new URL(req.url);
+  const targetUrl = `${PRODUCTION_COMMENT_API}${incomingUrl.search || ''}`;
+  const res = await fetch(targetUrl, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+    cache: 'no-store',
+  });
+  const data = await res.json().catch(() => ({}));
+  return NextResponse.json(data, { status: res.status });
 }
 
 async function findCommentIssues() {
@@ -142,14 +158,18 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     if (searchParams.get('summary') === '1') {
-      return NextResponse.json(await listRecentComments());
+      try {
+        return NextResponse.json(await listRecentComments());
+      } catch {
+        return proxyProductionComments(req);
+      }
     }
 
     const pageId = normalizePageId(searchParams.get('pageId') || '/');
     const issue = await findIssue(pageId);
 
     if (!issue) {
-      return NextResponse.json({ comments: [] });
+      return proxyProductionComments(req);
     }
 
     const res = await fetch(issue.comments_url, {
@@ -172,19 +192,24 @@ export async function GET(req: Request) {
       };
     }).reverse();
 
+    if (comments.length === 0) {
+      return proxyProductionComments(req);
+    }
+
     return NextResponse.json({ comments });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || '读取留言失败' }, { status: 500 });
+    return proxyProductionComments(req);
   }
 }
 
 export async function POST(req: Request) {
   try {
+    const bodyText = await req.text();
     if (!TOKEN) {
-      return NextResponse.json({ error: '留言功能还缺 COMMENT_GITHUB_TOKEN 环境变量。' }, { status: 500 });
+      return proxyProductionComments(req, { method: 'POST', body: bodyText });
     }
 
-    const body = await req.json();
+    const body = JSON.parse(bodyText || '{}');
     const pageId = normalizePageId(body.pageId || '/');
     const author = String(body.author || '路过的朋友').trim().slice(0, 40) || '路过的朋友';
     const content = String(body.content || '').trim().slice(0, 2000);
@@ -207,7 +232,7 @@ export async function POST(req: Request) {
     const data = await res.json();
 
     if (!res.ok) {
-      throw new Error(data.message || '发送留言失败');
+      return proxyProductionComments(req, { method: 'POST', body: bodyText });
     }
 
     return NextResponse.json({

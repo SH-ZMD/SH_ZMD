@@ -37,7 +37,7 @@ export const siteConfig = {
     google: "sh.zmd01@gmail.com",
     email: "3471847196@qq.com",
     qq: "3471847196",
-    wechat: "本名",
+    wechat: "",
   },
   counts: {
     photos: 128, // 照片墙数量可以手动写死或动态计算
@@ -70,6 +70,6 @@ export const siteConfig = {
     maxOutputTokens: 150,
     temperature: 0.85,
   },
-  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\\\\\\\\\\\\\\\\\n简介：正在学习AI agent的化工小白，分享从零开始的经验\\\\\\\\\\\\\\\\\n链接：https://sh-zmd.vercel.app/\\\\\\\\\\\\\\\\\n",
+  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\n简介：正在学习AI agent的化工小白，分享从零开始的经验\n链接：https://sh-zmd.vercel.app/\n",
   enableLevelSystem: true,
 };
