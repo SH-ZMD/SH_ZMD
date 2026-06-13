@@ -34,6 +34,50 @@ function formatUpdateTime(dateString: string) {
   } catch { return dateString; }
 }
 
+function cleanMomentText(content: string) {
+  return (content || '')
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getLatestMoments() {
+  const momentDirs = [
+    path.join(process.cwd(), 'moments'),
+    path.join(process.cwd(), 'posts', 'moments'),
+  ];
+  const moments: any[] = [];
+
+  for (const dir of momentDirs) {
+    if (!fs.existsSync(dir)) continue;
+    const fileNames = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+    for (const fileName of fileNames) {
+      const fullPath = path.join(dir, fileName);
+      const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
+      const text = cleanMomentText(content);
+      const rawDate = data.date || '1970-01-01';
+      moments.push({
+        slug: data.id || fileName.replace(/\.md$/, ''),
+        title: text.slice(0, 24) || '新的说说',
+        description: text || '去说说看看最近的想法。',
+        cover: data.images?.[0] || siteConfig.defaultPostCover,
+        date: rawDate,
+        formattedDate: formatUpdateTime(rawDate),
+        href: '/moments',
+        badge: 'Latest Moment',
+      });
+    }
+  }
+
+  return moments.sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    if (dateB !== dateA) return dateB - dateA;
+    return b.slug.localeCompare(a.slug);
+  });
+}
+
 export default function Home() {
   const postsDirectory = path.join(process.cwd(), 'posts');
   let allPosts: any[] = [];
@@ -61,7 +105,8 @@ export default function Home() {
       });
     }
   } catch (e) {}
-  const top5Posts = allPosts.length > 0 ? allPosts.slice(0, 5) : [{ slug: 'none', title: '暂无文章', description: '快去写第一篇吧！', cover: siteConfig.defaultPostCover, date: '', formattedDate: '' }];
+  const latestMoments = getLatestMoments();
+  const top5Posts = latestMoments.length > 0 ? latestMoments.slice(0, 5) : [{ slug: 'none', title: '暂无说说', description: '去说说写下第一条近况吧。', cover: siteConfig.defaultPostCover, date: '', formattedDate: '', href: '/moments', badge: 'Latest Moment' }];
 
   const chattersDirectory = path.join(process.cwd(), 'chatters');
   let allChatters: any[] = [];
