@@ -68,18 +68,24 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  const navLinks = [
+  const primaryNavLinks = [
     { name: '首页', href: '/' },
     { name: '归档', href: '/timeline' },
     { name: '照片墙', href: '/photowall' },
     { name: '音乐', href: '/music' },
-    { name: '灵境', href: '/tree' },
     { name: '说说', href: '/moments' },
-    { name: '杂谈', href: '/chatter' },
     { name: '留言墙', href: '/guestbook' },
+    { name: '资源表', href: '/key-urls' },
+  ];
+
+  const moreNavLinks = [
+    { name: '杂谈', href: '/chatter' },
+    { name: '灵境', href: '/tree' },
     { name: '友链', href: '/friends' },
     { name: '关于', href: '/about' },
   ];
+
+  const navLinks = [...primaryNavLinks, ...moreNavLinks];
 
   // 🌟 核心：过滤掉“灵境”，专供手机端使用，保证圆盘自动重新均匀排布
   const mobileNavLinks = navLinks.filter(link => link.href !== '/tree');
@@ -87,24 +93,41 @@ export default function Navbar() {
   return (
     <>
       {/* PC端导航栏 */}
-      <header className={`hidden md:block w-full fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${showNav ? 'translate-y-0' : '-translate-y-full'} bg-white/40 dark:bg-slate-900/50 backdrop-blur-xl border-white/20 dark:border-white/5 shadow-sm`}>
-        <div className="w-[90%] max-w-6xl mx-auto h-16 flex items-center justify-between px-4 sm:px-[30px] box-border">
-          <Link href="/" className="text-xl font-black text-slate-800 dark:text-white tracking-tighter hover:text-indigo-600 dark:hover:text-indigo-400 transition-all duration-300">
-            {siteConfig.navTitle || siteConfig.authorName}
-            <span className="text-indigo-500 mx-1">{siteConfig.navSuffix || 'の'}</span>
-            {siteConfig.navAfter || '宝藏之地'}
+      <header className={`hidden md:block w-full fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${showNav ? 'translate-y-0' : '-translate-y-full'} bg-white/50 dark:bg-slate-950/55 backdrop-blur-2xl border-white/30 dark:border-white/10 shadow-lg shadow-slate-900/5`}>
+        <div className="w-[94%] max-w-7xl mx-auto h-16 flex items-center justify-between gap-4 px-4 box-border">
+          <Link href="/" className="group flex items-center gap-3 shrink-0 rounded-2xl px-3 py-2 transition-all hover:bg-white/45 dark:hover:bg-white/5">
+            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/25 text-sm font-black">SH</span>
+            <span className="hidden xl:flex items-baseline whitespace-nowrap text-lg font-black tracking-tight text-slate-800 dark:text-white">
+              {siteConfig.navTitle || siteConfig.authorName}
+              <span className="text-indigo-500 mx-1">{siteConfig.navSuffix || 'の'}</span>
+              {siteConfig.navAfter || '宝藏之地'}
+            </span>
           </Link>
-          <nav className="flex gap-8 text-sm font-bold">
-            {/* PC端依然使用全量的 navLinks */}
-            {navLinks.map((link) => {
+          <nav className="flex items-center gap-1 rounded-full bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-white/10 px-2 py-1.5 shadow-inner backdrop-blur-xl">
+            {primaryNavLinks.map((link) => {
               const isActive = pathname === link.href || pathname === `${link.href}/`;
               return (
-                <Link key={link.href} href={link.href} className={`relative py-1 transition-colors ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-200 hover:text-indigo-600'}`}>
+                <Link key={link.href} href={link.href} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-black leading-none transition-all ${isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white'}`}>
                   {link.name}
-                  {isActive && <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-indigo-500 rounded-full animate-pulse"></span>}
                 </Link>
               );
             })}
+            <div className="relative group">
+              <button className={`whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-black leading-none transition-all ${moreNavLinks.some((link) => pathname === link.href || pathname === `${link.href}/`) ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white'}`}>
+                更多 ▾
+              </button>
+              <div className="invisible opacity-0 translate-y-2 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 absolute right-0 top-full mt-3 w-40 rounded-3xl border border-white/50 dark:border-white/10 bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl shadow-2xl p-2">
+                {moreNavLinks.map((link) => {
+                  const isActive = pathname === link.href || pathname === `${link.href}/`;
+                  return (
+                    <Link key={link.href} href={link.href} className={`flex items-center justify-between whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-black transition-all ${isActive ? 'bg-indigo-500 text-white' : 'text-slate-600 dark:text-slate-200 hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-white'}`}>
+                      {link.name}
+                      {isActive && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
           </nav>
         </div>
       </header>
