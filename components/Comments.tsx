@@ -11,11 +11,25 @@ type CommentItem = {
   parentId?: string | null;
 };
 
-function withImage(content: string, imageUrl: string) {
+function withImages(content: string, imageUrls: string[]) {
   const cleanContent = content.trim();
-  const cleanUrl = imageUrl.trim();
-  if (!cleanUrl) return cleanContent;
-  return `${cleanContent}${cleanContent ? '\n\n' : ''}![留言图片](${cleanUrl})`;
+  const cleanUrls = imageUrls.map((url) => url.trim()).filter(Boolean);
+  if (cleanUrls.length === 0) return cleanContent;
+
+  const images = cleanUrls.map((url) => `![留言图片](${url})`).join('\n\n');
+  return `${cleanContent}${cleanContent ? '\n\n' : ''}${images}`;
+}
+
+async function uploadCommentImage(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch('/api/comment-images', {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.url) throw new Error(data.error || '图片上传失败');
+  return data.url as string;
 }
 
 function renderCommentContent(content: string) {
@@ -46,9 +60,10 @@ export default function Comments() {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [author, setAuthor] = useState('');
   const [content, setContent] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState('');
   const [replyTarget, setReplyTarget] = useState<CommentItem | null>(null);
   const [replyContent, setReplyContent] = useState('');
@@ -85,7 +100,7 @@ export default function Comments() {
 
   const submitComment = async (parentId?: string) => {
     const cleanAuthor = author.trim() || '路过的朋友';
-    const cleanContent = parentId ? replyContent.trim() : withImage(content, imageUrl);
+    const cleanContent = parentId ? replyContent.trim() : withImages(content, imageUrls);
     if (!cleanContent) {
       setMessage('先写点内容再发送吧。');
       return;
@@ -102,7 +117,7 @@ export default function Comments() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '发送失败');
       setContent('');
-      setImageUrl('');
+      setImageUrls([]);
       setReplyContent('');
       setReplyTarget(null);
       setAuthor('');
@@ -113,6 +128,34 @@ export default function Comments() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleImageFiles = async (files?: FileList | File[]) => {
+    const selectedFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
+    if (selectedFiles.length === 0) return;
+
+    setUploadingImage(true);
+    setMessage('正在上传图片...');
+    try {
+      const urls = await Promise.all(selectedFiles.map((file) => uploadCommentImage(file)));
+      setImageUrls((prev) => [...prev, ...urls]);
+      setMessage(`已插入 ${urls.length} 张图片，发送留言后会一起显示。`);
+    } catch (error: any) {
+      setMessage(error.message || '图片上传失败');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handlePasteImage = async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith('image/'));
+    if (!imageItem) return;
+
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    event.preventDefault();
+    await handleImageFiles([file]);
   };
 
   return (
@@ -130,26 +173,68 @@ export default function Comments() {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            onPaste={handlePasteImage}
             placeholder="不用登录 GitHub，直接写留言就行。"
             rows={4}
             className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none resize-y focus:ring-2 focus:ring-indigo-500/50"
           />
-          <input
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="图片链接（可不填，支持 jpg/png/webp/gif 直链）"
-            className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-          />
+          <div className="flex flex-col gap-3 rounded-2xl border border-white/35 bg-white/20 p-3 dark:border-slate-700/60 dark:bg-slate-950/20">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-indigo-500 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-600">
+                {uploadingImage ? '上传中...' : '插入图片'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(event) => {
+                    handleImageFiles(event.target.files || undefined);
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
+              {imageUrls.length > 0 && (
+                <button
+                  onClick={() => setImageUrls([])}
+                  className="rounded-2xl border border-white/40 px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
+                >
+                  移除全部图片
+                </button>
+              )}
+            </div>
+            {imageUrls.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {imageUrls.map((url, index) => (
+                  <div key={`${url}-${index}`} className="relative">
+                    <img src={url} alt="待发送图片" className="h-32 w-full rounded-2xl border border-white/30 object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setImageUrls((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
+                      className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-black text-white backdrop-blur"
+                    >
+                      移除
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <input
+                onChange={(e) => setImageUrls(e.target.value.trim() ? [e.target.value.trim()] : [])}
+                placeholder="也可以粘贴图片链接"
+                className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+              />
+            )}
+          </div>
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {message || '支持 Markdown；留言会先保存到站点留言箱。'}
             </p>
             <button
               onClick={() => submitComment()}
-              disabled={submitting}
+              disabled={submitting || uploadingImage}
               className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
             >
-              {submitting ? '发送中...' : '发送留言'}
+              {uploadingImage ? '图片上传中...' : submitting ? '发送中...' : '发送留言'}
             </button>
           </div>
         </div>
