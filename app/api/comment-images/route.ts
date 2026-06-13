@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
 const BRANCH = process.env.COMMENT_IMAGE_BRANCH || 'main';
+const MAX_IMAGE_EDGE = 1600;
+const WEBP_QUALITY = 82;
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
@@ -28,6 +31,32 @@ function extensionFromType(type: string) {
     'image/gif': '.gif',
     'image/avif': '.avif',
   } as Record<string, string>)[type] || '.png';
+}
+
+async function compressImage(file: File) {
+  const bytes = Buffer.from(await file.arrayBuffer());
+  if (file.type === 'image/gif') {
+    return { bytes, ext: extensionFromType(file.type), compressed: false };
+  }
+
+  try {
+    const output = await sharp(bytes, { animated: false })
+      .rotate()
+      .resize({
+        width: MAX_IMAGE_EDGE,
+        height: MAX_IMAGE_EDGE,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: WEBP_QUALITY })
+      .toBuffer();
+
+    if (output.length < bytes.length) {
+      return { bytes: output, ext: '.webp', compressed: true };
+    }
+  } catch {}
+
+  return { bytes, ext: extensionFromType(file.type), compressed: false };
 }
 
 export async function OPTIONS() {
@@ -104,11 +133,11 @@ export async function POST(req: Request) {
       return json({ error: '图片不能超过 5MB。' }, { status: 400 });
     }
 
-    const ext = extensionFromType(file.type);
+    const image = await compressImage(file);
+    const ext = image.ext;
     const filename = `comment-${Date.now()}-${Math.random().toString(16).slice(2, 8)}${ext}`;
     const repoPath = `public/comment-images/${filename}`;
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const content = bytes.toString('base64');
+    const content = image.bytes.toString('base64');
 
     const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}`, {
       method: 'PUT',
@@ -134,6 +163,7 @@ export async function POST(req: Request) {
       success: true,
       url: `/api/comment-images?path=${encodeURIComponent(repoPath)}`,
       path: repoPath,
+      compressed: image.compressed,
     });
   } catch (error: any) {
     return json({ error: error.message || '图片上传失败。' }, { status: 500 });
