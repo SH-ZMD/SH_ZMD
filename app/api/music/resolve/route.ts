@@ -6,6 +6,7 @@ const METING_APIS = [
   'https://meting-api.9887665.xyz/api',
   'https://api.injahow.cn/meting/',
 ];
+const PRODUCTION_MUSIC_API = 'https://sh-zmd.vercel.app/api/music/resolve';
 
 function normalizeSong(song: any, id: string) {
   return {
@@ -46,8 +47,24 @@ async function fetchFromProvider(api: string, id: string) {
   }
 }
 
+async function fetchFromProduction(id: string) {
+  try {
+    const res = await fetch(`${PRODUCTION_MUSIC_API}?id=${encodeURIComponent(id)}`, {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+
+    const song = normalizeSong(await res.json(), id);
+    return song.src ? song : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const host = req.headers.get('host') || '';
   const id = String(searchParams.get('id') || '').trim();
 
   if (!/^\d+$/.test(id)) {
@@ -58,6 +75,13 @@ export async function GET(req: Request) {
     const song = await fetchFromProvider(api, id);
     if (song) {
       return NextResponse.json(song);
+    }
+  }
+
+  if (!host.includes('sh-zmd.vercel.app')) {
+    const productionSong = await fetchFromProduction(id);
+    if (productionSong) {
+      return NextResponse.json(productionSong);
     }
   }
 
