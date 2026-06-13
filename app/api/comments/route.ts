@@ -4,21 +4,6 @@ const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
 const PRODUCTION_COMMENT_API = process.env.PRODUCTION_COMMENT_API || 'https://sh-zmd.vercel.app/api/comments';
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
-
-function json(data: any, init?: ResponseInit) {
-  return NextResponse.json(data, {
-    ...init,
-    headers: {
-      ...CORS_HEADERS,
-      ...(init?.headers || {}),
-    },
-  });
-}
 
 function normalizePageId(pageId: string) {
   return (pageId || '/').replace(/\s+/g, '-').slice(0, 80);
@@ -67,7 +52,7 @@ async function proxyProductionComments(req: Request, init?: RequestInit) {
     cache: 'no-store',
   });
   const data = await res.json().catch(() => ({}));
-  return json(data, { status: res.status });
+  return NextResponse.json(data, { status: res.status });
 }
 
 async function findCommentIssues() {
@@ -180,7 +165,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     if (searchParams.get('summary') === '1') {
       try {
-        return json(await listRecentComments());
+        return NextResponse.json(await listRecentComments());
       } catch {
         return proxyProductionComments(req);
       }
@@ -218,14 +203,10 @@ export async function GET(req: Request) {
       return proxyProductionComments(req);
     }
 
-    return json({ comments });
+    return NextResponse.json({ comments });
   } catch (error: any) {
     return proxyProductionComments(req);
   }
-}
-
-export async function OPTIONS() {
-  return new Response(null, { status: 204, headers: CORS_HEADERS });
 }
 
 export async function POST(req: Request) {
@@ -262,7 +243,7 @@ export async function POST(req: Request) {
       return proxyProductionComments(req, { method: 'POST', body: bodyText });
     }
 
-    return json({
+    return NextResponse.json({
       comment: {
         id: String(data.id),
         author,

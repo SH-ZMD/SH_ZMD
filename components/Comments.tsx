@@ -11,13 +11,42 @@ type CommentItem = {
   parentId?: string | null;
 };
 
-function withImages(content: string, imageUrls: string[]) {
-  const cleanContent = content.trim();
-  const cleanUrls = imageUrls.map((url) => url.trim()).filter(Boolean);
-  if (cleanUrls.length === 0) return cleanContent;
+const PRODUCTION_COMMENT_API = 'https://sh-zmd.vercel.app/api/comments';
 
-  const images = cleanUrls.map((url) => `![留言图片](${url})`).join('\n\n');
-  return `${cleanContent}${cleanContent ? '\n\n' : ''}${images}`;
+async function readJsonSafely(res: Response) {
+  const text = await res.text();
+  if (!text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
+async function fetchProductionComments(pageId: string) {
+  const remoteRes = await fetch(`${PRODUCTION_COMMENT_API}?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
+  const remoteData = await readJsonSafely(remoteRes);
+  if (remoteRes.ok && Array.isArray(remoteData.comments)) {
+    return remoteData.comments;
+  }
+  return [];
+}
+
+async function uploadLocalCommentImage(file: File) {
+  const configRes = await fetch(`/backend_config.json?t=${Date.now()}`);
+  const configData = await configRes.json();
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`http://127.0.0.1:${configData.api_port}/api/picbed/local-upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await readJsonSafely(res);
+  if (!res.ok || !data.success || !data.url) {
+    throw new Error(data.message || '图片导入失败');
+  }
+  return data.url as string;
 }
 
 async function uploadCommentImage(file: File) {
@@ -27,9 +56,18 @@ async function uploadCommentImage(file: File) {
     method: 'POST',
     body: formData,
   });
-  const data = await res.json().catch(() => ({}));
+  const data = await readJsonSafely(res);
   if (!res.ok || !data.url) throw new Error(data.error || '图片上传失败');
   return data.url as string;
+}
+
+function withImages(content: string, imageUrls: string[]) {
+  const cleanContent = content.trim();
+  const cleanUrls = imageUrls.map((url) => url.trim()).filter(Boolean);
+  if (cleanUrls.length === 0) return cleanContent;
+
+  const images = cleanUrls.map((url) => `![留言图片](${url})`).join('\n\n');
+  return `${cleanContent}${cleanContent ? '\n\n' : ''}${images}`;
 }
 
 function renderCommentContent(content: string) {
@@ -84,11 +122,20 @@ export default function Comments() {
     setMessage('');
     try {
       const res = await fetch(`/api/comments?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
-      const data = await res.json();
+      const data = await readJsonSafely(res);
       if (!res.ok) throw new Error(data.error || '留言读取失败');
-      setComments(data.comments || []);
+      if (Array.isArray(data.comments) && data.comments.length > 0) {
+        setComments(data.comments);
+        return;
+      }
+
+      setComments(await fetchProductionComments(pageId));
     } catch (error: any) {
-      setMessage(error.message || '留言读取失败');
+      try {
+        setComments(await fetchProductionComments(pageId));
+      } catch {
+        setMessage('留言读取失败');
+      }
     } finally {
       setLoading(false);
     }
@@ -114,19 +161,66 @@ export default function Comments() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent, parentId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || '发送失败');
+      const data = await readJsonSafely(res);
+      let finalData = data;
+      if (!res.ok) {
+        const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent, parentId }),
+        });
+        finalData = await readJsonSafely(remoteRes);
+        if (!remoteRes.ok) throw new Error(finalData.error || data.error || '发送失败');
+      }
       setContent('');
       setImageUrls([]);
       setReplyContent('');
       setReplyTarget(null);
       setAuthor('');
-      setComments((prev) => [data.comment, ...prev].filter(Boolean));
+      setComments((prev) => [finalData.comment, ...prev].filter(Boolean));
       setMessage('留言已送达。');
     } catch (error: any) {
-      setMessage(error.message || '发送失败');
+      try {
+        const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent, parentId }),
+        });
+        const remoteData = await readJsonSafely(remoteRes);
+        if (!remoteRes.ok) throw new Error(remoteData.error || '发送失败');
+        setContent('');
+        setImageUrls([]);
+        setReplyContent('');
+        setReplyTarget(null);
+        setAuthor('');
+        setComments((prev) => [remoteData.comment, ...prev].filter(Boolean));
+        setMessage('留言已送达。');
+      } catch {
+        setMessage('发送失败');
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handlePasteImage = async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith('image/'));
+    if (!imageItem) return;
+
+    const file = imageItem.getAsFile();
+    if (!file) return;
+
+    event.preventDefault();
+    setUploadingImage(true);
+    setMessage('正在导入粘贴的图片...');
+    try {
+      const url = await uploadCommentImage(file);
+      setImageUrls((prev) => [...prev, url]);
+      setMessage('图片已导入，发送留言后会一起显示。');
+    } catch (error: any) {
+      setMessage(error.message || '图片导入失败');
+    } finally {
+      setUploadingImage(false);
     }
   };
 
@@ -145,17 +239,6 @@ export default function Comments() {
     } finally {
       setUploadingImage(false);
     }
-  };
-
-  const handlePasteImage = async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-    const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith('image/'));
-    if (!imageItem) return;
-
-    const file = imageItem.getAsFile();
-    if (!file) return;
-
-    event.preventDefault();
-    await handleImageFiles([file]);
   };
 
   return (
@@ -227,14 +310,14 @@ export default function Comments() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {message || '支持 Markdown；留言会先保存到站点留言箱。'}
+              {message || '支持 Markdown；可粘贴图片，留言会先保存到站点留言箱。'}
             </p>
             <button
               onClick={() => submitComment()}
               disabled={submitting || uploadingImage}
               className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
             >
-              {uploadingImage ? '图片上传中...' : submitting ? '发送中...' : '发送留言'}
+              {uploadingImage ? '导入图片中...' : submitting ? '发送中...' : '发送留言'}
             </button>
           </div>
         </div>

@@ -64,7 +64,6 @@ async function fetchFromProduction(id: string) {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const host = req.headers.get('host') || '';
   const id = String(searchParams.get('id') || '').trim();
 
   if (!/^\d+$/.test(id)) {
@@ -78,11 +77,9 @@ export async function GET(req: Request) {
     }
   }
 
-  if (!host.includes('sh-zmd.vercel.app')) {
-    const productionSong = await fetchFromProduction(id);
-    if (productionSong) {
-      return NextResponse.json(productionSong);
-    }
+  const productionSong = await fetchFromProduction(id);
+  if (productionSong) {
+    return NextResponse.json(productionSong);
   }
 
   return NextResponse.json({ error: '所有音乐解析源都暂时不可用' }, { status: 502 });

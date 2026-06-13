@@ -172,7 +172,7 @@ export default function KeyUrlPublicTable() {
                   return (
                     <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 align-top hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
                       <td className="px-5 py-4">
-                        <div className="font-black text-slate-800 dark:text-white">{item.name || '未命名资源'}</div>
+                        <div className="whitespace-nowrap font-black text-slate-800 dark:text-white">{item.name || '未命名资源'}</div>
                       </td>
                       <td className={`px-5 py-4 ${fieldMarked(item, 'key') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}>
                         <div className="flex items-center gap-2">
@@ -191,8 +191,8 @@ export default function KeyUrlPublicTable() {
                         </div>
                       </td>
                       <td className="px-5 py-4"><span className="rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
-                      <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full ${status.dot}`} />{status.label}</span></td>
-                      <td className="px-5 py-4"><div className="flex flex-wrap gap-1.5">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="rounded-lg bg-white/60 dark:bg-slate-900/60 px-2 py-1 text-[11px] font-black text-slate-500 dark:text-slate-300 border border-white/60 dark:border-slate-700">#{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
+                      <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span></td>
+                      <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 dark:from-indigo-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-indigo-700 dark:text-indigo-200 border border-indigo-400/25 shadow-sm"><span className="text-indigo-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
                       <td className={`px-5 py-4 ${fieldMarked(item, 'note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 font-medium">{item.note || '—'}</p></td>
                     </tr>
                   );
