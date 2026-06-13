@@ -115,12 +115,17 @@ async function createIssue(pageId: string) {
 function parseComment(body: string) {
   const match = body.match(/^访客：(.+?)\n\n([\s\S]*)$/);
   if (!match) {
-    return { author: '路过的朋友', content: body };
+    return { author: '路过的朋友', content: body, parentId: null };
   }
 
+  const meta = match[1].trim();
+  const parentMatch = meta.match(/\s\| parent:(.+)$/);
+  const author = parentMatch ? meta.replace(/\s\| parent:.+$/, '').trim() : meta;
+
   return {
-    author: match[1].trim() || '路过的朋友',
+    author: author || '路过的朋友',
     content: match[2].trim(),
+    parentId: parentMatch?.[1]?.trim() || null,
   };
 }
 
@@ -151,6 +156,7 @@ async function listRecentComments() {
           pageUrl: pageId.startsWith('/') ? pageId : `/${pageId}`,
           author: parsed.author,
           content: parsed.content,
+          parentId: parsed.parentId,
           createdAt: item.created_at,
         };
       });
@@ -203,6 +209,7 @@ export async function GET(req: Request) {
         id: String(item.id),
         author: parsed.author,
         content: parsed.content,
+        parentId: parsed.parentId,
         createdAt: item.created_at,
       };
     }).reverse();
@@ -232,6 +239,7 @@ export async function POST(req: Request) {
     const pageId = normalizePageId(body.pageId || '/');
     const author = String(body.author || '路过的朋友').trim().slice(0, 40) || '路过的朋友';
     const content = String(body.content || '').trim().slice(0, 2000);
+    const parentId = body.parentId ? String(body.parentId).trim().slice(0, 80) : '';
 
     if (!content) {
       return NextResponse.json({ error: '留言内容不能为空。' }, { status: 400 });
@@ -245,7 +253,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        body: `访客：${author}\n\n${content}`,
+        body: `访客：${author}${parentId ? ` | parent:${parentId}` : ''}\n\n${content}`,
       }),
     });
     const data = await res.json();
@@ -259,6 +267,7 @@ export async function POST(req: Request) {
         id: String(data.id),
         author,
         content,
+        parentId: parentId || null,
         createdAt: data.created_at,
       },
     });
