@@ -6,7 +6,7 @@ const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOK
 const BRANCH = process.env.COMMENT_IMAGE_BRANCH || 'main';
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -32,6 +32,55 @@ function extensionFromType(type: string) {
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: CORS_HEADERS });
+}
+
+export async function GET(req: Request) {
+  try {
+    if (!TOKEN) {
+      return json({ error: '图片读取还缺 COMMENT_GITHUB_TOKEN。' }, { status: 500 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const repoPath = searchParams.get('path') || '';
+
+    if (!repoPath.startsWith('public/comment-images/')) {
+      return json({ error: '图片路径无效。' }, { status: 400 });
+    }
+
+    const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${repoPath}?ref=${BRANCH}`, {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        Accept: 'application/vnd.github.raw',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return json({ error: data.message || '图片读取失败。' }, { status: res.status });
+    }
+
+    const ext = repoPath.split('.').pop()?.toLowerCase();
+    const contentType = ({
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      avif: 'image/avif',
+    } as Record<string, string>)[ext || ''] || 'application/octet-stream';
+
+    return new Response(await res.arrayBuffer(), {
+      headers: {
+        ...CORS_HEADERS,
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000, immutable',
+      },
+    });
+  } catch (error: any) {
+    return json({ error: error.message || '图片读取失败。' }, { status: 500 });
+  }
 }
 
 export async function POST(req: Request) {
@@ -83,7 +132,7 @@ export async function POST(req: Request) {
 
     return json({
       success: true,
-      url: `https://raw.githubusercontent.com/${OWNER}/${REPO}/${BRANCH}/${repoPath}`,
+      url: `/api/comment-images?path=${encodeURIComponent(repoPath)}`,
       path: repoPath,
     });
   } catch (error: any) {
