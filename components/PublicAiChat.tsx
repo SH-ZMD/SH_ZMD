@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { Bot, BrainCircuit, ImagePlus, Loader2, Send, ShieldCheck, Sparkles, Trash2, UserRound, X } from 'lucide-react';
+import { Bot, BrainCircuit, ImagePlus, Loader2, RefreshCw, Send, ShieldCheck, Sparkles, Trash2, UserRound, X } from 'lucide-react';
 
 type ChatRole = 'user' | 'assistant';
 type ReasoningLevel = 'quick' | 'normal' | 'deep';
@@ -11,6 +11,15 @@ type ChatMessage = {
   role: ChatRole;
   content: string;
   imageDataUrl?: string;
+};
+
+type EndpointStatus = {
+  name: string;
+  source: 'resource' | 'env';
+  ok: boolean;
+  latencyMs?: number | null;
+  statusCode?: number | null;
+  message?: string;
 };
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -51,6 +60,8 @@ export default function PublicAiChat() {
   const [reasoningLevel, setReasoningLevel] = useState<ReasoningLevel>('normal');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState('');
+  const [endpoints, setEndpoints] = useState<EndpointStatus[]>([]);
+  const [isCheckingEndpoints, setIsCheckingEndpoints] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -60,6 +71,25 @@ export default function PublicAiChat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, isSending]);
+
+  async function checkEndpoints() {
+    setIsCheckingEndpoints(true);
+    setError('');
+    try {
+      const res = await fetch('/api/public-chat?check=1', { cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || '检测失败');
+      setEndpoints(Array.isArray(data?.endpoints) ? data.endpoints : []);
+    } catch (err: any) {
+      setError(err?.message || '检测失败，请稍后再试。');
+    } finally {
+      setIsCheckingEndpoints(false);
+    }
+  }
+
+  useEffect(() => {
+    checkEndpoints();
+  }, []);
 
   async function handleImage(file?: File) {
     setError('');
@@ -124,7 +154,7 @@ export default function PublicAiChat() {
         {
           id: uid(),
           role: 'assistant',
-          content: data?.reply || '我这次没有生成有效回复。',
+          content: data?.usedEndpoint ? `${data.reply || '我这次没有生成有效回复。'}\n\n—— 使用：${data.usedEndpoint.name} · ${data.usedEndpoint.latencyMs}ms` : (data?.reply || '我这次没有生成有效回复。'),
         },
       ]);
     } catch (err: any) {
@@ -164,10 +194,32 @@ export default function PublicAiChat() {
               </div>
               <ul className="mt-3 space-y-2 text-xs leading-6 opacity-90">
                 <li>• 不需要个人服务器，走站点后端 API 代理，Key 不会暴露到浏览器。</li>
-                <li>• 每个 IP：10 秒冷却，10 分钟最多 20 次。</li>
+                <li>• 自动检测资源库 Key，聊天失败会自动换下一个。</li>
+                <li>• 每个 IP：3 秒冷却，10 分钟最多 120 次。</li>
                 <li>• 识图图片限制 5MB，文本限制 4000 字。</li>
                 <li>• “思考强度”只控制回答深度，不展示隐藏推理链。</li>
               </ul>
+            </div>
+
+            <div className="rounded-3xl border border-sky-400/25 bg-sky-500/10 p-4 text-sm text-sky-900 dark:text-sky-100">
+              <div className="flex items-center justify-between gap-3">
+                <div className="font-black">资源库 Key 检测</div>
+                <button type="button" onClick={checkEndpoints} disabled={isCheckingEndpoints} className="inline-flex items-center gap-1 rounded-full border border-sky-400/30 px-3 py-1 text-xs font-black disabled:opacity-60">
+                  <RefreshCw className={`h-3.5 w-3.5 ${isCheckingEndpoints ? 'animate-spin' : ''}`} /> 检测
+                </button>
+              </div>
+              <div className="mt-3 space-y-2 text-xs">
+                {endpoints.length === 0 ? (
+                  <p className="opacity-80">暂未检测到完整资源库 Key，会尝试使用站点默认环境变量。</p>
+                ) : endpoints.map((endpoint) => (
+                  <div key={`${endpoint.name}-${endpoint.source}`} className="flex items-center justify-between gap-2 rounded-2xl bg-white/40 px-3 py-2 dark:bg-white/5">
+                    <span className="truncate font-black">{endpoint.name}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-1 font-black ${endpoint.ok ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/15 text-rose-600 dark:text-rose-300'}`}>
+                      {endpoint.ok ? '可用' : '不可用'} · {typeof endpoint.latencyMs === 'number' ? `${endpoint.latencyMs}ms` : '未测'}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="grid gap-3 rounded-3xl border border-white/45 bg-white/35 p-4 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">

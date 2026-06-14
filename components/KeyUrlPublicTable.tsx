@@ -137,7 +137,7 @@ export default function KeyUrlPublicTable() {
                 Key 与链接资源表
               </h1>
               <p className="mt-4 max-w-3xl text-sm md:text-base leading-7 text-slate-600 dark:text-slate-300 font-medium">
-                集中展示服务地址、推广链接和模型 Key。低端模型表去掉名称列，保留分组、状态、标签和备注。
+                集中展示服务地址、推广链接和模型 Key。低端模型表只保留 URL、Key、状态；状态里会显示检测延迟。
               </p>
             </div>
             <div className="rounded-3xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs leading-6 text-amber-700 dark:text-amber-200 max-w-md">
@@ -190,7 +190,7 @@ export default function KeyUrlPublicTable() {
             {activeTable === 'resources' ? (
               <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-300"><Star size={13} /> 高亮为已标注内容</span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表去掉名称列，保留分组、状态、标签和备注</span>
+              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表只保留 URL、Key、状态；状态里会显示检测延迟</span>
             )}
           </div>
 
@@ -201,8 +201,8 @@ export default function KeyUrlPublicTable() {
                 <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 bg-white/60 dark:bg-slate-950/55">
                   <th className="px-5 py-4 w-[260px]">Key</th>
                   <th className="px-5 py-4 w-[280px]">URL</th>
-                  <th className="px-5 py-4 w-[130px]">分组</th>
-                  <th className="px-5 py-4 w-[130px]">状态</th>
+                  <th className="px-5 py-4 w-[170px]">分组</th>
+                  <th className="px-5 py-4 w-[150px]">状态</th>
                   <th className="px-5 py-4 w-[180px]">标签</th>
                   <th className="px-5 py-4 w-[260px]">备注</th>
                 </tr>
@@ -232,7 +232,7 @@ export default function KeyUrlPublicTable() {
                         {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="h-8 w-8 rounded-xl bg-rose-500/10 text-rose-500 grid place-items-center shrink-0"><ExternalLink size={14} /></a>}
                       </div>
                     </td>
-                    <td className="px-5 py-4"><span className="rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
+                    <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
                     <td className="px-5 py-4">
                       {(() => {
                         const status = statusMeta[item.status] || statusMeta.active;
@@ -252,8 +252,8 @@ export default function KeyUrlPublicTable() {
                   <th className="px-5 py-4 w-[210px]">名称</th>
                   <th className="px-5 py-4 w-[260px]">Key</th>
                   <th className="px-5 py-4 w-[280px]">URL / 推广链接</th>
-                  <th className="px-5 py-4 w-[130px]">分组</th>
-                  <th className="px-5 py-4 w-[130px]">状态</th>
+                  <th className="px-5 py-4 w-[170px]">分组</th>
+                  <th className="px-5 py-4 w-[150px]">状态</th>
                   <th className="px-5 py-4 w-[180px]">标签</th>
                   <th className="px-5 py-4 w-[260px]">备注</th>
                 </tr>
@@ -288,7 +288,7 @@ export default function KeyUrlPublicTable() {
                           {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="h-8 w-8 rounded-xl bg-indigo-500/10 text-indigo-500 grid place-items-center shrink-0"><ExternalLink size={14} /></a>}
                         </div>
                       </td>
-                      <td className="px-5 py-4"><span className="rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
+                      <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
                       <td className="px-5 py-4"><span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health)}</span></span></td>
                       <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 dark:from-indigo-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-indigo-700 dark:text-indigo-200 border border-indigo-400/25 shadow-sm"><span className="text-indigo-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
                       <td className={`px-5 py-4 ${fieldMarked(item, 'note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 font-medium">{item.note || '—'}</p></td>
