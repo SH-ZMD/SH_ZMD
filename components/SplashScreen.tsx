@@ -13,10 +13,11 @@ export default function SplashScreen() {
     const hasSeenSplash = sessionStorage.getItem('hasSeenSplash') === 'true';
 
     if (!hasSeenSplash) {
+      document.documentElement.classList.add('splash-active');
       setShow(true);
       const timer = setTimeout(() => {
         exitSplash();
-      }, 2200);
+      }, 800);
       return () => clearTimeout(timer);
     } else {
       // 容错处理：确保直接访问时类名存在
@@ -27,11 +28,8 @@ export default function SplashScreen() {
   const exitSplash = () => {
     setShow(false);
     sessionStorage.setItem('hasSeenSplash', 'true');
-
-    // 【核心解封】：动画快结束时，给 html 加上类名，CSS 会自动把内容显示出来
-    setTimeout(() => {
-      document.documentElement.classList.add('splash-seen');
-    }, 500);
+    document.documentElement.classList.remove('splash-active');
+    document.documentElement.classList.add('splash-seen');
   };
 
   if (!isMounted) return null;
@@ -42,7 +40,7 @@ export default function SplashScreen() {
         <motion.div
           key="splash-screen-container"
           exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
           className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white dark:bg-slate-950"
         >
           <div className="relative z-10 flex flex-col items-center">
@@ -67,7 +65,7 @@ export default function SplashScreen() {
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 1.8, ease: "easeInOut" }}
+                transition={{ duration: 1.1, ease: "easeOut" }}
                 className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.8)]"
               />
             </div>

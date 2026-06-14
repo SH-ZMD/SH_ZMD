@@ -2,16 +2,16 @@ import 'katex/dist/katex.min.css';
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "../components/ThemeProvider";
-import BackgroundEffects from "../components/BackgroundEffects";
+import LazyBackgroundEffects from "../components/LazyBackgroundEffects";
 import { MusicProvider } from "../components/MusicProvider";
 import FloatingPlayer from "../components/FloatingPlayer";
 import { siteConfig } from "../siteConfig";
-import ClickEffect from "../components/ClickEffect";
+import LazyClickEffect from "../components/LazyClickEffect";
 import BackgroundSlider from "../components/BackgroundSlider";
 import GlobalToolbox from "../components/GlobalToolbox";
 import SplashScreen from "../components/SplashScreen";
-import CyberCat from '../components/CyberCat';
-import DanmakuBackground from '../components/DanmakuBackground';
+import LazyCyberCat from '../components/LazyCyberCat';
+import LazyDanmakuBackground from '../components/LazyDanmakuBackground';
 
 import MobileBackButton from '../components/MobileBackButton';
 
@@ -32,8 +32,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `
-              #app-mount-root { opacity: 0; visibility: hidden; pointer-events: none; }
-              html.splash-seen #app-mount-root { opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; }
+              #app-mount-root { opacity: 1; visibility: visible; pointer-events: auto; }
+              html.splash-active #app-mount-root { opacity: 1; visibility: visible; pointer-events: auto; }
             `
           }}
         />
@@ -77,13 +77,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
                 {/* 隐藏手机端高负载粒子特效 */}
                 <div className="hidden md:block absolute inset-0 w-full h-full">
-                  <BackgroundEffects />
+                  <LazyBackgroundEffects />
                 </div>
               </div>
 
               {/* 隐藏手机端弹幕 */}
               <div className="hidden md:block">
-                <DanmakuBackground />
+                <LazyDanmakuBackground />
               </div>
 
               <div className="relative z-10 flex-1 flex flex-col">
@@ -104,7 +104,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
               {/* 隐藏手机端点击粒子 */}
               <div className="hidden md:block">
-                <ClickEffect />
+                <LazyClickEffect />
               </div>
             </div>
 
@@ -118,7 +118,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </MusicProvider>
 
           <div className="hidden md:block">
-            <CyberCat />
+            <LazyCyberCat />
           </div>
 
         </ThemeProvider>

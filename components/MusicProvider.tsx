@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useRef, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useRef, useEffect, ReactNode, useCallback } from 'react';
 import { siteConfig } from '../siteConfig';
 
 // 【增强版 LRC 歌词解析】
@@ -139,7 +139,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
         }
 
-        const fetchPromises = (siteConfig.cloudMusicIds || []).map(id => fetchSong(String(id)));
+        const fetchPromises = (siteConfig.cloudMusicIds || []).slice(0, 3).map(id => fetchSong(String(id)));
         const results = await Promise.all(fetchPromises);
 
         const neteasePlaylist = results
