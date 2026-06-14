@@ -27,13 +27,13 @@ const aiConfig = (siteConfig.geminiConfig || {}) as {
   temperature?: number;
 };
 
-const MAX_TEXT_LENGTH = 4000;
-const MAX_HISTORY_MESSAGES = 10;
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const REQUEST_COOLDOWN_MS = 3 * 1000;
+const MAX_TEXT_LENGTH = 200000;
+const MAX_HISTORY_MESSAGES = 50;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const SERVER_SIDE_RATE_LIMIT_ENABLED = false;
+const REQUEST_COOLDOWN_MS = 0;
 const WINDOW_MS = 10 * 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 120;
-const MAX_OUTPUT_TOKENS = 1200;
+const MAX_REQUESTS_PER_WINDOW = Number.MAX_SAFE_INTEGER;
 const requestWindows = new Map<string, { windowStart: number; count: number; lastAt: number }>();
 
 const MODEL_ALLOWLIST = [
@@ -49,7 +49,14 @@ const REASONING_PROMPTS: Record<ReasoningLevel, string> = {
 };
 
 function json(data: unknown, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
+      'Pragma': 'no-cache',
+    },
+  });
 }
 
 function getClientKey(req: Request) {
@@ -57,6 +64,7 @@ function getClientKey(req: Request) {
 }
 
 function checkRateLimit(clientKey: string) {
+  if (!SERVER_SIDE_RATE_LIMIT_ENABLED) return '';
   const now = Date.now();
   const current = requestWindows.get(clientKey);
   if (current && now - current.lastAt < REQUEST_COOLDOWN_MS) {
@@ -149,6 +157,34 @@ function sanitizeMessages(raw: unknown): PublicChatMessage[] {
   })).filter((item) => item.content.trim().length > 0);
 }
 
+function extractReplyText(data: any) {
+  const candidates = [
+    data?.choices?.[0]?.message?.content,
+    data?.choices?.[0]?.text,
+    data?.output_text,
+    data?.reply,
+    data?.response,
+    data?.result,
+    data?.data?.content,
+    data?.candidates?.[0]?.content?.parts?.[0]?.text,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string' && value.trim()) return value;
+    if (Array.isArray(value)) {
+      const text = value
+        .map((part) => typeof part === 'string' ? part : (part?.text || part?.content || ''))
+        .join('')
+        .trim();
+      if (text) return text;
+    }
+  }
+
+  const toolCalls = data?.choices?.[0]?.message?.tool_calls;
+  if (Array.isArray(toolCalls) && toolCalls.length) return '模型返回了工具调用请求，但站内聊天暂不执行工具调用。请换一种问法直接要求它用文字回答。';
+  return '';
+}
+
 function pickModel(rawModel: unknown) {
   const requested = String(rawModel || '');
   return MODEL_ALLOWLIST.find((model) => model.id === requested)?.id || MODEL_ALLOWLIST[0].id;
@@ -196,13 +232,17 @@ async function callEndpoint(endpoint: AiEndpoint, model: string, messages: Publi
     body: JSON.stringify({
       model,
       messages: buildPayloadMessages(messages, reasoningLevel, imageDataUrl),
-      max_tokens: MAX_OUTPUT_TOKENS,
       temperature: aiConfig.temperature ?? 0.7,
     }),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data?.error?.message || `HTTP ${response.status}`);
-  return { reply: data?.choices?.[0]?.message?.content || '我这次没有生成有效回复。', latencyMs: Date.now() - started };
+  if (!response.ok) throw new Error(data?.error?.message || data?.message || `HTTP ${response.status}`);
+  const reply = extractReplyText(data);
+  if (!reply) {
+    const finishReason = data?.choices?.[0]?.finish_reason;
+    throw new Error(finishReason ? `模型没有返回正文（finish_reason: ${finishReason}）` : '模型没有返回正文，已自动切换下一个 Key');
+  }
+  return { reply, latencyMs: Date.now() - started };
 }
 
 async function checkEndpoint(endpoint: AiEndpoint) {
@@ -247,8 +287,7 @@ export async function POST(req: Request) {
     const reasoningLevel = pickReasoning(body?.reasoningLevel);
 
     if (messages.length === 0) return json({ error: '请输入要发送的内容。' }, 400);
-    if (messages.reduce((sum, message) => sum + message.content.length, 0) > MAX_TEXT_LENGTH * 2) return json({ error: '本次对话内容太长，请缩短后再发送。' }, 413);
-    if (imageDataUrl && (!imageDataUrl.startsWith('data:image/') || estimateDataUrlBytes(imageDataUrl) > MAX_IMAGE_BYTES)) return json({ error: '识图图片必须是 5MB 以内的图片文件。' }, 413);
+    if (imageDataUrl && (!imageDataUrl.startsWith('data:image/') || estimateDataUrlBytes(imageDataUrl) > MAX_IMAGE_BYTES)) return json({ error: '识图图片过大或格式不正确。浏览器/平台请求体有上限，请压缩后再上传。' }, 413);
     if ((aiConfig.provider || 'openai-compatible') !== 'openai-compatible') return json({ error: '公开 AI 聊天目前使用 OpenAI-compatible 接口。' }, 500);
 
     const endpoints = await getAiEndpoints();
@@ -282,6 +321,6 @@ export async function GET(req: Request) {
     endpointCount: endpoints.length,
     usableEndpointCount: checkedEndpoints.filter((item) => item.ok).length,
     endpoints: checkedEndpoints,
-    limits: { cooldownSeconds: REQUEST_COOLDOWN_MS / 1000, maxRequestsPer10Minutes: MAX_REQUESTS_PER_WINDOW, maxImageMB: MAX_IMAGE_BYTES / 1024 / 1024, maxTextLength: MAX_TEXT_LENGTH },
+    limits: { rateLimitEnabled: SERVER_SIDE_RATE_LIMIT_ENABLED, cooldownSeconds: 0, maxRequestsPer10Minutes: null, maxImageMB: MAX_IMAGE_BYTES / 1024 / 1024, maxTextLength: MAX_TEXT_LENGTH, serverStorage: false },
   });
 }

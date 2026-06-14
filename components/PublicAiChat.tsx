@@ -22,8 +22,8 @@ type EndpointStatus = {
   message?: string;
 };
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-const MAX_TEXT_LENGTH = 4000;
+const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+const MAX_TEXT_LENGTH = 200000;
 
 const MODELS = [
   { id: 'gpt-5.4', label: '站长默认 GPT' },
@@ -99,7 +99,7 @@ export default function PublicAiChat() {
       return;
     }
     if (file.size > MAX_IMAGE_BYTES) {
-      setError(`识图图片不能超过 5MB，当前是 ${formatBytes(file.size)}，请压缩后再上传。`);
+      setError(`识图图片不能超过 20MB，当前是 ${formatBytes(file.size)}，请压缩后再上传。`);
       return;
     }
 
@@ -142,7 +142,7 @@ export default function PublicAiChat() {
           imageDataUrl: userMessage.imageDataUrl,
           messages: nextMessages
             .filter((message) => message.id !== 'welcome')
-            .slice(-10)
+            .slice(-50)
             .map((message) => ({ role: message.role, content: message.content })),
         }),
       });
@@ -184,7 +184,7 @@ export default function PublicAiChat() {
             <div>
               <h1 className="text-4xl font-black tracking-tight md:text-6xl">站内 GPT 聊天室</h1>
               <p className="mt-4 text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
-                直接在网站里使用 GPT：支持连续对话、识图、模型选择和思考强度。为了不烧额度，已经加了频率限制和图片大小限制。
+                直接在网站里使用 GPT：支持连续对话、识图、模型选择和思考强度。聊天记录只保存在当前浏览器页面内，不写入你的服务器硬盘。
               </p>
             </div>
 
@@ -194,10 +194,10 @@ export default function PublicAiChat() {
               </div>
               <ul className="mt-3 space-y-2 text-xs leading-6 opacity-90">
                 <li>• 不需要个人服务器，走站点后端 API 代理，Key 不会暴露到浏览器。</li>
-                <li>• 自动检测资源库 Key，聊天失败会自动换下一个。</li>
-                <li>• 每个 IP：3 秒冷却，10 分钟最多 120 次。</li>
-                <li>• 识图图片限制 5MB，文本限制 4000 字。</li>
-                <li>• “思考强度”只控制回答深度，不展示隐藏推理链。</li>
+                <li>• 服务端不保存聊天记录、不落库、不写文件；刷新页面即清空。</li>
+                <li>• 已关闭站内频率限制和输出 token 限制，聊天失败会自动换下一个 Key。</li>
+                <li>• 文本上限提高到 200000 字；图片上限提高到 20MB（仍受浏览器和部署平台请求体限制）。</li>
+                <li>• “思考强度”控制回答深度；模型如果支持会尽量完整作答。</li>
               </ul>
             </div>
 
@@ -210,7 +210,7 @@ export default function PublicAiChat() {
               </div>
               <div className="mt-3 space-y-2 text-xs">
                 {endpoints.length === 0 ? (
-                  <p className="opacity-80">暂未检测到完整资源库 Key，会尝试使用站点默认环境变量。</p>
+                  <p className="opacity-80">暂未检测到完整资源库 Key，会尝试使用站点默认环境变量；聊天不会保存到服务器。</p>
                 ) : endpoints.map((endpoint) => (
                   <div key={`${endpoint.name}-${endpoint.source}`} className="flex items-center justify-between gap-2 rounded-2xl bg-white/40 px-3 py-2 dark:bg-white/5">
                     <span className="truncate font-black">{endpoint.name}</span>
@@ -337,7 +337,7 @@ export default function PublicAiChat() {
                     placeholder="输入你想问的问题，Shift + Enter 换行..."
                     className="max-h-40 min-h-12 w-full resize-none rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-400"
                   />
-                  <div className={`mt-1 text-right text-[11px] ${remainingChars < 0 ? 'text-rose-300' : 'text-slate-500'}`}>{remainingChars} 字</div>
+                  <div className={`mt-1 text-right text-[11px] ${remainingChars < 0 ? 'text-rose-300' : 'text-slate-500'}`}>剩余 {remainingChars} 字 · 不保存到服务器</div>
                 </div>
                 <button
                   type="submit"
