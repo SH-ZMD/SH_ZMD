@@ -5,9 +5,11 @@ import { Check, Copy, ExternalLink, Eye, EyeOff, Filter, KeyRound, Link2, Search
 
 type MarkField = 'key' | 'url' | 'note';
 type ItemStatus = 'active' | 'testing' | 'paused' | 'archived';
+type TableType = 'resources' | 'lowend';
 
 type KeyUrlItem = {
   id: string;
+  table?: TableType;
   name: string;
   key: string;
   url: string;
@@ -39,6 +41,7 @@ function fieldMarked(item: KeyUrlItem, field: MarkField) {
 
 export default function KeyUrlPublicTable() {
   const [items, setItems] = useState<KeyUrlItem[]>([]);
+  const [activeTable, setActiveTable] = useState<TableType>('resources');
   const [query, setQuery] = useState('');
   const [groupFilter, setGroupFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -58,7 +61,7 @@ export default function KeyUrlPublicTable() {
         if (!res.ok) throw new Error('没有找到公开表格数据');
         const data = await res.json();
         if (!cancelled) {
-          setItems(Array.isArray(data.items) ? data.items : []);
+          setItems(Array.isArray(data.items) ? data.items.map((item: KeyUrlItem) => ({ ...item, table: item.table || 'resources' })) : []);
           setUpdatedAt(typeof data.updatedAt === 'number' ? data.updatedAt : null);
         }
       } catch (error: any) {
@@ -72,19 +75,21 @@ export default function KeyUrlPublicTable() {
   }, []);
 
   const groups = useMemo(() => {
-    return Array.from(new Set(items.map((item) => item.group).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set(items.filter((item) => (item.table || 'resources') === 'resources').map((item) => item.group).filter(Boolean))).sort((a, b) => a.localeCompare(b));
   }, [items]);
 
   const filteredItems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return items.filter((item) => {
-      if (groupFilter !== 'all' && item.group !== groupFilter) return false;
-      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      const itemTable = item.table || 'resources';
+      if (itemTable !== activeTable) return false;
+      if (activeTable === 'resources' && groupFilter !== 'all' && item.group !== groupFilter) return false;
+      if (activeTable === 'resources' && statusFilter !== 'all' && item.status !== statusFilter) return false;
       if (!normalized) return true;
       const haystack = [item.name, item.url, item.group, item.note, item.status, ...(item.tags || [])].join(' ').toLowerCase();
       return haystack.includes(normalized);
     });
-  }, [groupFilter, items, query, statusFilter]);
+  }, [activeTable, groupFilter, items, query, statusFilter]);
 
   const copyText = async (id: string, value: string, label: string) => {
     if (!value) return;
@@ -109,7 +114,7 @@ export default function KeyUrlPublicTable() {
                 Key 与链接资源表
               </h1>
               <p className="mt-4 max-w-3xl text-sm md:text-base leading-7 text-slate-600 dark:text-slate-300 font-medium">
-                集中展示服务地址、推广链接和重要 Key。带星标的单元格为重点标注；Key 默认隐藏，需要手动点亮查看。
+                集中展示服务地址、推广链接和模型 Key。低端模型表只保留 URL、Key 和状态。
               </p>
             </div>
             <div className="rounded-3xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs leading-6 text-amber-700 dark:text-amber-200 max-w-md">
@@ -120,19 +125,34 @@ export default function KeyUrlPublicTable() {
         </div>
 
         <div className="relative p-5 md:p-8">
+          <div className="mb-5 flex flex-wrap gap-3 rounded-2xl bg-white/45 dark:bg-slate-950/30 border border-white/50 dark:border-slate-800/70 p-2">
+            <button
+              onClick={() => setActiveTable('resources')}
+              className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'resources' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
+            >
+              资源表
+            </button>
+            <button
+              onClick={() => setActiveTable('lowend')}
+              className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'lowend' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
+            >
+              低端模型表
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px_180px] gap-3 mb-5">
             <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
               <Search size={17} className="text-slate-400" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-100 placeholder:text-slate-400" placeholder="搜索名称、URL、备注、标签" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-100 placeholder:text-slate-400" placeholder={activeTable === 'lowend' ? '搜索 URL、Key、状态' : '搜索名称、URL、备注、标签'} />
             </label>
-            <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
+            <label className={`h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3 ${activeTable === 'lowend' ? 'opacity-45 pointer-events-none' : ''}`}>
               <Filter size={17} className="text-slate-400" />
               <select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} className="w-full bg-transparent outline-none text-sm font-black text-slate-700 dark:text-slate-100">
                 <option value="all">全部分组</option>
                 {groups.map((group) => <option key={group} value={group}>{group}</option>)}
               </select>
             </label>
-            <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
+            <label className={`h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3 ${activeTable === 'lowend' ? 'opacity-45 pointer-events-none' : ''}`}>
               <KeyRound size={17} className="text-slate-400" />
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="w-full bg-transparent outline-none text-sm font-black text-slate-700 dark:text-slate-100">
                 <option value="all">全部状态</option>
@@ -144,10 +164,58 @@ export default function KeyUrlPublicTable() {
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-black text-slate-500 dark:text-slate-400">
             <span>{filteredItems.length} / {items.length} 条记录</span>
             {updatedAt && <span>更新于：{new Date(updatedAt).toLocaleString()}</span>}
-            <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-300"><Star size={13} /> 高亮为已标注内容</span>
+            {activeTable === 'resources' ? (
+              <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-300"><Star size={13} /> 高亮为已标注内容</span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表只展示 URL、Key、状态</span>
+            )}
           </div>
 
           <div className="overflow-x-auto rounded-3xl border border-white/60 dark:border-slate-800/80 shadow-inner">
+            {activeTable === 'lowend' ? (
+            <table className="w-full min-w-[860px] border-collapse bg-white/30 dark:bg-slate-950/25">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 bg-white/60 dark:bg-slate-950/55">
+                  <th className="px-5 py-4 w-[360px]">URL</th>
+                  <th className="px-5 py-4 w-[360px]">Key</th>
+                  <th className="px-5 py-4 w-[160px]">状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr><td colSpan={3} className="px-5 py-16 text-center text-sm font-black text-slate-400">正在加载低端模型表...</td></tr>
+                ) : loadError ? (
+                  <tr><td colSpan={3} className="px-5 py-16 text-center text-sm font-black text-rose-500">{loadError}</td></tr>
+                ) : filteredItems.length === 0 ? (
+                  <tr><td colSpan={3} className="px-5 py-16 text-center text-sm font-black text-slate-400">暂无低端模型记录。</td></tr>
+                ) : filteredItems.map((item) => (
+                  <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 align-top hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Link2 size={15} className="text-rose-500 shrink-0" />
+                        {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="truncate text-sm font-bold text-rose-600 dark:text-rose-300 hover:underline max-w-[285px]">{item.url}</a> : <span className="text-slate-400">—</span>}
+                        {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="h-8 w-8 rounded-xl bg-rose-500/10 text-rose-500 grid place-items-center shrink-0"><ExternalLink size={14} /></a>}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-2">
+                        <code className="max-w-[250px] truncate rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-200">
+                          {visibleKeys[item.id] ? (item.key || '—') : maskSecret(item.key)}
+                        </code>
+                        {item.key && <button onClick={() => setVisibleKeys((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} className="h-9 w-9 rounded-xl border border-white/60 dark:border-slate-700 bg-white/50 dark:bg-slate-900/60 grid place-items-center text-slate-500">{visibleKeys[item.id] ? <EyeOff size={15} /> : <Eye size={15} />}</button>}
+                        {item.key && <button onClick={() => copyText(item.id, item.key, 'key')} className="h-9 w-9 rounded-xl border border-white/60 dark:border-slate-700 bg-white/50 dark:bg-slate-900/60 grid place-items-center text-slate-500">{copied === `${item.id}-key` ? <Check size={15} /> : <Copy size={15} />}</button>}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-black text-rose-600 dark:text-rose-300">
+                        <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />{item.status || '待测'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            ) : (
             <table className="w-full min-w-[1120px] border-collapse bg-white/30 dark:bg-slate-950/25">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 bg-white/60 dark:bg-slate-950/55">
@@ -199,6 +267,7 @@ export default function KeyUrlPublicTable() {
                 })}
               </tbody>
             </table>
+            )}
           </div>
         </div>
       </div>
