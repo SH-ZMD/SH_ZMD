@@ -79,6 +79,7 @@ export default function Navbar() {
   ];
 
   const moreNavLinks = [
+    { name: 'AI聊天', href: '/ai-chat' },
     { name: '杂谈', href: '/chatter' },
     { name: '灵境', href: '/tree' },
     { name: '友链', href: '/friends' },
