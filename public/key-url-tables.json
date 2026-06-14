@@ -59,7 +59,46 @@
       "markedFields": [],
       "createdAt": 1781379472700,
       "updatedAt": 1781439004848
+    },
+    {
+      "id": "low-001",
+      "name": "烂站A",
+      "key": "sk-abc123...def456",
+      "url": "https://烂站A.com/v1",
+      "group": "低端模型",
+      "status": "paused",
+      "tags": [],
+      "note": "",
+      "markedFields": [],
+      "createdAt": 1781380000000,
+      "updatedAt": 1781380000000
+    },
+    {
+      "id": "low-002",
+      "name": "烂站B",
+      "key": "sk-xyz789...123",
+      "url": "https://烂站B.com/v1",
+      "group": "低端模型",
+      "status": "paused",
+      "tags": [],
+      "note": "",
+      "markedFields": [],
+      "createdAt": 1781380000000,
+      "updatedAt": 1781380000000
+    },
+    {
+      "id": "low-003",
+      "name": "烂站C",
+      "key": "sk-111222...999",
+      "url": "https://烂站C.com/v1",
+      "group": "低端模型",
+      "status": "archived",
+      "tags": [],
+      "note": "",
+      "markedFields": [],
+      "createdAt": 1781380000000,
+      "updatedAt": 1781380000000
     }
   ],
-  "updatedAt": 1781439004848
+  "updatedAt": 1781442797447
 }

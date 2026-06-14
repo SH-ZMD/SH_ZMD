@@ -277,6 +277,73 @@ export default function KeyUrlPublicTable() {
             )}
           </div>
         </div>
+
+        {/* ======================== 低端模型表格 ======================== */}
+        <div className="relative p-5 md:p-8 border-t border-white/50 dark:border-white/10 bg-white/20 dark:bg-slate-950/20">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full bg-rose-500/10 border border-rose-500/20 px-4 py-1.5 text-xs font-black text-rose-600 dark:text-rose-300">
+              <ShieldAlert size={14} /> 低端模型
+            </div>
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">仅供参考，质量较差或已失效的站点</div>
+          </div>
+
+          <div className="overflow-x-auto rounded-3xl border border-white/60 dark:border-slate-800/80 shadow-inner">
+            <table className="w-full min-w-[860px] border-collapse bg-white/30 dark:bg-slate-950/25">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 bg-white/60 dark:bg-slate-950/55">
+                  <th className="px-5 py-4 w-[380px]">URL</th>
+                  <th className="px-5 py-4 w-[280px]">Key</th>
+                  <th className="px-5 py-4 w-[120px]">状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const lowItems = items.filter(i => i.group === '低端模型');
+                  if (lowItems.length === 0) {
+                    return <tr><td colSpan={3} className="px-5 py-12 text-center text-sm font-black text-slate-400">暂无低端模型记录</td></tr>;
+                  }
+                  return lowItems.map((item) => {
+                    const status = statusMeta[item.status] || statusMeta.active;
+                    return (
+                      <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Link2 size={15} className="text-rose-500 shrink-0" />
+                            {item.url ? (
+                              <a href={item.url} target="_blank" rel="noreferrer" className="truncate text-sm font-bold text-rose-600 dark:text-rose-300 hover:underline">{item.url}</a>
+                            ) : <span className="text-slate-400">—</span>}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <code className="max-w-[240px] truncate rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-200">
+                              {visibleKeys[item.id] ? (item.key || '—') : maskSecret(item.key)}
+                            </code>
+                            {item.key && (
+                              <>
+                                <button onClick={() => setVisibleKeys((prev) => ({ ...prev, [item.id]: !prev[item.id] }))} className="h-8 w-8 rounded-xl border border-white/60 dark:border-slate-700 bg-white/50 dark:bg-slate-900/60 grid place-items-center text-slate-500">
+                                  {visibleKeys[item.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                                <button onClick={() => copyText(item.id, item.key, 'low-key')} className="h-8 w-8 rounded-xl border border-white/60 dark:border-slate-700 bg-white/50 dark:bg-slate-900/60 grid place-items-center text-slate-500">
+                                  {copied === `${item.id}-low-key` ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-black ${status.className}`}>
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
   );
