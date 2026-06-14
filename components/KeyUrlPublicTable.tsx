@@ -75,16 +75,16 @@ export default function KeyUrlPublicTable() {
   }, []);
 
   const groups = useMemo(() => {
-    return Array.from(new Set(items.filter((item) => (item.table || 'resources') === 'resources').map((item) => item.group).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-  }, [items]);
+    return Array.from(new Set(items.filter((item) => (item.table || 'resources') === activeTable).map((item) => item.group).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  }, [activeTable, items]);
 
   const filteredItems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return items.filter((item) => {
       const itemTable = item.table || 'resources';
       if (itemTable !== activeTable) return false;
-      if (activeTable === 'resources' && groupFilter !== 'all' && item.group !== groupFilter) return false;
-      if (activeTable === 'resources' && statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (groupFilter !== 'all' && item.group !== groupFilter) return false;
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       if (!normalized) return true;
       const haystack = [item.name, item.url, item.group, item.note, item.status, ...(item.tags || [])].join(' ').toLowerCase();
       return haystack.includes(normalized);
@@ -114,7 +114,7 @@ export default function KeyUrlPublicTable() {
                 Key 与链接资源表
               </h1>
               <p className="mt-4 max-w-3xl text-sm md:text-base leading-7 text-slate-600 dark:text-slate-300 font-medium">
-                集中展示服务地址、推广链接和模型 Key。低端模型表只保留 URL、Key 和状态。
+                集中展示服务地址、推广链接和模型 Key。低端模型表去掉名称列，保留分组、状态、标签和备注。
               </p>
             </div>
             <div className="rounded-3xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs leading-6 text-amber-700 dark:text-amber-200 max-w-md">
@@ -143,16 +143,16 @@ export default function KeyUrlPublicTable() {
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px_180px] gap-3 mb-5">
             <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
               <Search size={17} className="text-slate-400" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-100 placeholder:text-slate-400" placeholder={activeTable === 'lowend' ? '搜索 URL、Key、状态' : '搜索名称、URL、备注、标签'} />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-100 placeholder:text-slate-400" placeholder={activeTable === 'lowend' ? '搜索 URL、Key、分组、备注、标签' : '搜索名称、URL、备注、标签'} />
             </label>
-            <label className={`h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3 ${activeTable === 'lowend' ? 'opacity-45 pointer-events-none' : ''}`}>
+            <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
               <Filter size={17} className="text-slate-400" />
               <select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} className="w-full bg-transparent outline-none text-sm font-black text-slate-700 dark:text-slate-100">
                 <option value="all">全部分组</option>
                 {groups.map((group) => <option key={group} value={group}>{group}</option>)}
               </select>
             </label>
-            <label className={`h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3 ${activeTable === 'lowend' ? 'opacity-45 pointer-events-none' : ''}`}>
+            <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
               <KeyRound size={17} className="text-slate-400" />
               <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="w-full bg-transparent outline-none text-sm font-black text-slate-700 dark:text-slate-100">
                 <option value="all">全部状态</option>
@@ -167,36 +167,32 @@ export default function KeyUrlPublicTable() {
             {activeTable === 'resources' ? (
               <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-300"><Star size={13} /> 高亮为已标注内容</span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表只展示 URL、Key、状态</span>
+              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表去掉名称列，保留分组、状态、标签和备注</span>
             )}
           </div>
 
           <div className="overflow-x-auto rounded-3xl border border-white/60 dark:border-slate-800/80 shadow-inner">
             {activeTable === 'lowend' ? (
-            <table className="w-full min-w-[860px] border-collapse bg-white/30 dark:bg-slate-950/25">
+            <table className="w-full min-w-[1120px] border-collapse bg-white/30 dark:bg-slate-950/25">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 bg-white/60 dark:bg-slate-950/55">
-                  <th className="px-5 py-4 w-[360px]">URL</th>
-                  <th className="px-5 py-4 w-[360px]">Key</th>
-                  <th className="px-5 py-4 w-[160px]">状态</th>
+                  <th className="px-5 py-4 w-[260px]">Key</th>
+                  <th className="px-5 py-4 w-[280px]">URL</th>
+                  <th className="px-5 py-4 w-[130px]">分组</th>
+                  <th className="px-5 py-4 w-[130px]">状态</th>
+                  <th className="px-5 py-4 w-[180px]">标签</th>
+                  <th className="px-5 py-4 w-[260px]">备注</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={3} className="px-5 py-16 text-center text-sm font-black text-slate-400">正在加载低端模型表...</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-16 text-center text-sm font-black text-slate-400">正在加载低端模型表...</td></tr>
                 ) : loadError ? (
-                  <tr><td colSpan={3} className="px-5 py-16 text-center text-sm font-black text-rose-500">{loadError}</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-16 text-center text-sm font-black text-rose-500">{loadError}</td></tr>
                 ) : filteredItems.length === 0 ? (
-                  <tr><td colSpan={3} className="px-5 py-16 text-center text-sm font-black text-slate-400">暂无低端模型记录。</td></tr>
+                  <tr><td colSpan={6} className="px-5 py-16 text-center text-sm font-black text-slate-400">暂无低端模型记录。</td></tr>
                 ) : filteredItems.map((item) => (
                   <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 align-top hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Link2 size={15} className="text-rose-500 shrink-0" />
-                        {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="truncate text-sm font-bold text-rose-600 dark:text-rose-300 hover:underline max-w-[285px]">{item.url}</a> : <span className="text-slate-400">—</span>}
-                        {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="h-8 w-8 rounded-xl bg-rose-500/10 text-rose-500 grid place-items-center shrink-0"><ExternalLink size={14} /></a>}
-                      </div>
-                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <code className="max-w-[250px] truncate rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-200">
@@ -207,10 +203,21 @@ export default function KeyUrlPublicTable() {
                       </div>
                     </td>
                     <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-black text-rose-600 dark:text-rose-300">
-                        <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />{item.status || '待测'}
-                      </span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Link2 size={15} className="text-rose-500 shrink-0" />
+                        {item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="truncate text-sm font-bold text-rose-600 dark:text-rose-300 hover:underline max-w-[205px]">{item.url}</a> : <span className="text-slate-400">—</span>}
+                        {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="h-8 w-8 rounded-xl bg-rose-500/10 text-rose-500 grid place-items-center shrink-0"><ExternalLink size={14} /></a>}
+                      </div>
                     </td>
+                    <td className="px-5 py-4"><span className="rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
+                    <td className="px-5 py-4">
+                      {(() => {
+                        const status = statusMeta[item.status] || statusMeta.active;
+                        return <span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span>;
+                      })()}
+                    </td>
+                    <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-rose-500/15 to-fuchsia-500/15 dark:from-rose-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-rose-700 dark:text-rose-200 border border-rose-400/25 shadow-sm"><span className="text-rose-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
+                    <td className={`px-5 py-4 ${fieldMarked(item, 'note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 font-medium">{item.note || '—'}</p></td>
                   </tr>
                 ))}
               </tbody>
