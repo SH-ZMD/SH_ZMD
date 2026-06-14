@@ -7,6 +7,14 @@ type MarkField = 'key' | 'url' | 'note';
 type ItemStatus = 'active' | 'testing' | 'paused' | 'archived';
 type TableType = 'resources' | 'lowend';
 
+type KeyHealth = {
+  state: 'unknown' | 'ok' | 'bad' | 'error';
+  checkedAt?: number | null;
+  latencyMs?: number | null;
+  statusCode?: number | null;
+  message?: string;
+};
+
 type KeyUrlItem = {
   id: string;
   table?: TableType;
@@ -18,6 +26,7 @@ type KeyUrlItem = {
   tags: string[];
   note: string;
   markedFields: MarkField[];
+  health?: KeyHealth;
   createdAt: number;
   updatedAt: number;
 };
@@ -37,6 +46,20 @@ function maskSecret(value: string) {
 
 function fieldMarked(item: KeyUrlItem, field: MarkField) {
   return Array.isArray(item.markedFields) && item.markedFields.includes(field);
+}
+
+function latencyText(health?: KeyHealth) {
+  if (typeof health?.latencyMs !== 'number') return '延迟未测';
+  return `${health.latencyMs}ms`;
+}
+
+function healthTitle(health?: KeyHealth) {
+  if (!health?.checkedAt) return '尚未检测';
+  const parts = [new Date(health.checkedAt).toLocaleString()];
+  if (typeof health.latencyMs === 'number') parts.push(`延迟 ${health.latencyMs}ms`);
+  if (typeof health.statusCode === 'number') parts.push(`HTTP ${health.statusCode}`);
+  if (health.message) parts.push(health.message);
+  return parts.join(' · ');
 }
 
 export default function KeyUrlPublicTable() {
@@ -213,7 +236,7 @@ export default function KeyUrlPublicTable() {
                     <td className="px-5 py-4">
                       {(() => {
                         const status = statusMeta[item.status] || statusMeta.active;
-                        return <span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span>;
+                        return <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health)}</span></span>;
                       })()}
                     </td>
                     <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-rose-500/15 to-fuchsia-500/15 dark:from-rose-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-rose-700 dark:text-rose-200 border border-rose-400/25 shadow-sm"><span className="text-rose-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
@@ -266,7 +289,7 @@ export default function KeyUrlPublicTable() {
                         </div>
                       </td>
                       <td className="px-5 py-4"><span className="rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
-                      <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span></td>
+                      <td className="px-5 py-4"><span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health)}</span></span></td>
                       <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 dark:from-indigo-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-indigo-700 dark:text-indigo-200 border border-indigo-400/25 shadow-sm"><span className="text-indigo-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
                       <td className={`px-5 py-4 ${fieldMarked(item, 'note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 font-medium">{item.note || '—'}</p></td>
                     </tr>
@@ -332,8 +355,9 @@ export default function KeyUrlPublicTable() {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-black ${status.className}`}>
-                            <span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}
+                          <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1 text-xs font-black ${status.className}`}>
+                            <span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span>
+                            <span className="text-[10px] opacity-75">{latencyText(item.health)}</span>
                           </span>
                         </td>
                       </tr>
