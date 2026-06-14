@@ -2,6 +2,7 @@
   "items": [
     {
       "id": "0c73d256-4247-4790-ac16-787dd658884f",
+      "table": "resources",
       "name": "Grok",
       "key": "sk-5HP2fAvAx0Ni0VWMXUE0zNoTKB7txyXEPJtmTjuGoxtL9uEK",
       "url": "http://agishidai.cc.cd/v1",
@@ -13,10 +14,11 @@
       "note": "目前只有Grok4.3High和dpV4flash\n\nhttp://agishidai.cc.cd/sign-up?aff=8BR4",
       "markedFields": [],
       "createdAt": 1781438167985,
-      "updatedAt": 1781439004848
+      "updatedAt": 1781457263472
     },
     {
       "id": "72b7c7c4-39f5-4500-b2e2-9b3f2e9bdec9",
+      "table": "resources",
       "name": "Free",
       "key": "sk-SvYS8j0KW1DvbEhQMuyX2vscz1vNlX468sezNP9lPYaQ9gI0",
       "url": "http://cheap-host1.cheapyun.com:16781/v1",
@@ -28,25 +30,27 @@
       "note": "http://cheap-host1.cheapyun.com:16781/register?aff=6RJh\n\n很有潜力的站点，大家可以注册一下",
       "markedFields": [],
       "createdAt": 1781380213731,
-      "updatedAt": 1781439004848
+      "updatedAt": 1781457263472
     },
     {
       "id": "2e1051e3-570a-4160-8d93-95c8d26650a4",
+      "table": "resources",
       "name": "日月星辰",
       "key": "sk-3064501cf502a10d36045fd006221193e7b925028b0d4964df4f6fe94420629a",
       "url": "https://chatnew.riyuemedia.cn:16689",
       "group": "GPT",
-      "status": "paused",
+      "status": "active",
       "tags": [
-        "比较快"
+        "比较快但是单并发"
       ],
       "note": "https://chatapi.riyuemedia.cn:16689/login?aff=MMYN5ZYXSU2L\n\n听我的，注册一个，你会需要的",
       "markedFields": [],
       "createdAt": 1781380146360,
-      "updatedAt": 1781439004848
+      "updatedAt": 1781457263472
     },
     {
       "id": "99bba942-2e39-4ea4-86d9-831867e5c1d2",
+      "table": "resources",
       "name": "观澜",
       "key": "sk-LJuump1Oou1TYe5w7aSZSNlHIBVaikXLDml1nR8LnOlK7Vsh",
       "url": "https://free.liunian.ai.moe5200.com/",
@@ -58,13 +62,14 @@
       "note": "https://free.liunian.ai.moe5200.com/sign-up?aff=N96b\n\n如果未来你想要使用AI，我建议每个人都注册一个这个",
       "markedFields": [],
       "createdAt": 1781379472700,
-      "updatedAt": 1781439004848
+      "updatedAt": 1781457263472
     },
     {
       "id": "low-001",
-      "name": "烂站A",
+      "table": "lowend",
+      "name": "低端模型A",
       "key": "sk-abc123...def456",
-      "url": "https://烂站A.com/v1",
+      "url": "https://low-end-a.example.com/v1",
       "group": "低端模型",
       "status": "paused",
       "tags": [],
@@ -75,9 +80,10 @@
     },
     {
       "id": "low-002",
-      "name": "烂站B",
+      "table": "lowend",
+      "name": "低端模型B",
       "key": "sk-xyz789...123",
-      "url": "https://烂站B.com/v1",
+      "url": "https://low-end-b.example.com/v1",
       "group": "低端模型",
       "status": "paused",
       "tags": [],
@@ -88,9 +94,10 @@
     },
     {
       "id": "low-003",
-      "name": "烂站C",
+      "table": "lowend",
+      "name": "低端模型C",
       "key": "sk-111222...999",
-      "url": "https://烂站C.com/v1",
+      "url": "https://low-end-c.example.com/v1",
       "group": "低端模型",
       "status": "archived",
       "tags": [],
@@ -100,5 +107,5 @@
       "updatedAt": 1781380000000
     }
   ],
-  "updatedAt": 1781442797447
+  "updatedAt": 1781465415154
 }
