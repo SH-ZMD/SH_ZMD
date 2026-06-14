@@ -12,6 +12,8 @@ type CommentItem = {
 };
 
 const PRODUCTION_COMMENT_API = 'https://sh-zmd.vercel.app/api/comments';
+const MAX_COMMENT_IMAGE_SIZE = 10 * 1024 * 1024;
+const COMMENT_COOLDOWN_MS = 15 * 1000;
 
 async function readJsonSafely(res: Response) {
   const text = await res.text();
@@ -33,6 +35,9 @@ async function fetchProductionComments(pageId: string) {
 }
 
 async function uploadLocalCommentImage(file: File) {
+  if (file.size > MAX_COMMENT_IMAGE_SIZE) {
+    throw new Error('图片不能超过 10MB，请压缩后再上传。');
+  }
   const configRes = await fetch(`/backend_config.json?t=${Date.now()}`);
   const configData = await configRes.json();
   const formData = new FormData();
@@ -50,6 +55,9 @@ async function uploadLocalCommentImage(file: File) {
 }
 
 async function uploadCommentImage(file: File) {
+  if (file.size > MAX_COMMENT_IMAGE_SIZE) {
+    throw new Error('图片不能超过 10MB，请压缩后再上传。');
+  }
   const formData = new FormData();
   formData.append('file', file);
   const res = await fetch('/api/comment-images', {
@@ -103,6 +111,7 @@ export default function Comments() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState('');
+  const [lastSubmitAt, setLastSubmitAt] = useState(0);
   const [replyTarget, setReplyTarget] = useState<CommentItem | null>(null);
   const [replyContent, setReplyContent] = useState('');
 
@@ -146,6 +155,13 @@ export default function Comments() {
   }, [pageId]);
 
   const submitComment = async (parentId?: string) => {
+    const elapsed = Date.now() - lastSubmitAt;
+    if (elapsed < COMMENT_COOLDOWN_MS) {
+      const remaining = Math.ceil((COMMENT_COOLDOWN_MS - elapsed) / 1000);
+      setMessage(`发消息太快啦，请等待 ${remaining}s 后再发送（至少间隔 15s）。`);
+      return;
+    }
+
     const cleanAuthor = author.trim() || '路过的朋友';
     const cleanContent = parentId ? replyContent.trim() : withImages(content, imageUrls);
     if (!cleanContent) {
@@ -164,6 +180,10 @@ export default function Comments() {
       const data = await readJsonSafely(res);
       let finalData = data;
       if (!res.ok) {
+        if (res.status === 429) {
+          setMessage(data.error || '发消息太快啦，请等待 15s 后再发送。');
+          return;
+        }
         const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -178,6 +198,7 @@ export default function Comments() {
       setReplyTarget(null);
       setAuthor('');
       setComments((prev) => [finalData.comment, ...prev].filter(Boolean));
+      setLastSubmitAt(Date.now());
       setMessage('留言已送达。');
     } catch (error: any) {
       try {
@@ -194,7 +215,8 @@ export default function Comments() {
         setReplyTarget(null);
         setAuthor('');
         setComments((prev) => [remoteData.comment, ...prev].filter(Boolean));
-        setMessage('留言已送达。');
+        setLastSubmitAt(Date.now());
+      setMessage('留言已送达。');
       } catch {
         setMessage('发送失败');
       }
@@ -209,6 +231,11 @@ export default function Comments() {
 
     const file = imageItem.getAsFile();
     if (!file) return;
+    if (file.size > MAX_COMMENT_IMAGE_SIZE) {
+      event.preventDefault();
+      setMessage('图片不能超过 10MB，请压缩后再上传。');
+      return;
+    }
 
     event.preventDefault();
     setUploadingImage(true);
@@ -227,6 +254,11 @@ export default function Comments() {
   const handleImageFiles = async (files?: FileList | File[]) => {
     const selectedFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
     if (selectedFiles.length === 0) return;
+    const oversized = selectedFiles.find((file) => file.size > MAX_COMMENT_IMAGE_SIZE);
+    if (oversized) {
+      setMessage(`图片不能超过 10MB：${oversized.name} 太大，请压缩后再上传。`);
+      return;
+    }
 
     setUploadingImage(true);
     setMessage('正在上传图片...');

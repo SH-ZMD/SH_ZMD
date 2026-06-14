@@ -4,9 +4,29 @@ const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
 const PRODUCTION_COMMENT_API = process.env.PRODUCTION_COMMENT_API || 'https://sh-zmd.vercel.app/api/comments';
+const COMMENT_COOLDOWN_MS = 15 * 1000;
+const lastCommentAt = new Map<string, number>();
 
 function normalizePageId(pageId: string) {
   return (pageId || '/').replace(/\s+/g, '-').slice(0, 80);
+}
+
+function getClientKey(req: Request) {
+  const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const realIp = req.headers.get('x-real-ip')?.trim();
+  return forwarded || realIp || 'local-client';
+}
+
+function checkRateLimit(req: Request) {
+  const key = getClientKey(req);
+  const now = Date.now();
+  const previous = lastCommentAt.get(key) || 0;
+  const remainingMs = COMMENT_COOLDOWN_MS - (now - previous);
+  if (remainingMs > 0) {
+    return Math.ceil(remainingMs / 1000);
+  }
+  lastCommentAt.set(key, now);
+  return 0;
 }
 
 function issueTitle(pageId: string) {
@@ -212,6 +232,10 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const bodyText = await req.text();
+    const remaining = checkRateLimit(req);
+    if (remaining > 0) {
+      return NextResponse.json({ error: `发消息太快啦，请等待 ${remaining}s 后再发送（至少间隔 15s）。` }, { status: 429 });
+    }
     if (!TOKEN) {
       return proxyProductionComments(req, { method: 'POST', body: bodyText });
     }
