@@ -6,14 +6,14 @@
       "key": "sk-SvYS8j0KW1DvbEhQMuyX2vscz1vNlX468sezNP9lPYaQ9gI0",
       "url": "http://cheap-host1.cheapyun.com:16781/v1",
       "group": "Codex",
-      "status": "active",
+      "status": "paused",
       "tags": [
         "能用"
       ],
       "note": "http://cheap-host1.cheapyun.com:16781/register?aff=6RJh\n\n很有潜力的站点，大家可以注册一下",
       "markedFields": [],
       "createdAt": 1781380213731,
-      "updatedAt": 1781380348978
+      "updatedAt": 1781429159896
     },
     {
       "id": "2e1051e3-570a-4160-8d93-95c8d26650a4",
@@ -21,30 +21,30 @@
       "key": "sk-3064501cf502a10d36045fd006221193e7b925028b0d4964df4f6fe94420629a",
       "url": "https://chatnew.riyuemedia.cn:16689",
       "group": "Codex",
-      "status": "active",
+      "status": "paused",
       "tags": [
         "比较快"
       ],
       "note": "https://chatapi.riyuemedia.cn:16689/login?aff=MMYN5ZYXSU2L\n\n听我的，注册一个，你会需要的",
       "markedFields": [],
       "createdAt": 1781380146360,
-      "updatedAt": 1781380348978
+      "updatedAt": 1781429159896
     },
     {
       "id": "99bba942-2e39-4ea4-86d9-831867e5c1d2",
       "name": "观澜",
       "key": "sk-LJuump1Oou1TYe5w7aSZSNlHIBVaikXLDml1nR8LnOlK7Vsh",
       "url": "https://free.liunian.ai.moe5200.com/",
-      "group": "Hermes",
-      "status": "active",
+      "group": "Codex",
+      "status": "paused",
       "tags": [
         "超快"
       ],
       "note": "https://free.liunian.ai.moe5200.com/sign-up?aff=N96b\n\n如果未来你想要使用AI，我建议每个人都注册一个这个",
       "markedFields": [],
       "createdAt": 1781379472700,
-      "updatedAt": 1781380348978
+      "updatedAt": 1781429159896
     }
   ],
-  "updatedAt": 1781380348978
+  "updatedAt": 1781429159896
 }

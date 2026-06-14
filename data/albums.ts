@@ -21,10 +21,6 @@ export const albums: Album[] = [
         "caption": ""
       },
       {
-        "url": "/image/pasted-1781101448760-2ec894.png",
-        "caption": ""
-      },
-      {
         "url": "/image/pasted-1781101448826-c11da3.png",
         "caption": ""
       },
