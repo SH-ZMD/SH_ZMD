@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, ExternalLink, Eye, EyeOff, Filter, KeyRound, Link2, Search, ShieldAlert, Sparkles, Star } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, EyeOff, Filter, KeyRound, Link2, RefreshCw, Search, ShieldAlert, Sparkles, Star } from 'lucide-react';
 
 type MarkField = 'key' | 'url' | 'note';
 type ItemStatus = 'active' | 'testing' | 'paused' | 'archived';
@@ -73,6 +73,8 @@ export default function KeyUrlPublicTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [healthCheckedAt, setHealthCheckedAt] = useState<number | null>(null);
+  const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -86,6 +88,7 @@ export default function KeyUrlPublicTable() {
         if (!cancelled) {
           setItems(Array.isArray(data.items) ? data.items.map((item: KeyUrlItem) => ({ ...item, table: item.table || 'resources' })) : []);
           setUpdatedAt(typeof data.updatedAt === 'number' ? data.updatedAt : null);
+          window.setTimeout(() => checkHealth(), 350);
         }
       } catch (error: any) {
         if (!cancelled) setLoadError(error?.message || '读取表格失败');
@@ -95,7 +98,34 @@ export default function KeyUrlPublicTable() {
     };
     load();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+  const checkHealth = async (table?: TableType) => {
+    if (isCheckingHealth) return;
+    setIsCheckingHealth(true);
+    try {
+      const query = table ? `?table=${table}&t=${Date.now()}` : `?t=${Date.now()}`;
+      const res = await fetch(`/api/key-url-health${query}`, { cache: 'no-store' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) throw new Error(data?.error || '实时检测失败');
+      const healthById = new Map((data.results || []).map((result: any) => [result.id, result]));
+      setItems((prev) => prev.map((item) => {
+        const health = healthById.get(item.id) as KeyHealth | undefined;
+        if (!health) return item;
+        const nextStatus: ItemStatus = health.state === 'ok'
+          ? 'active'
+          : (health.state === 'bad' || health.state === 'error' ? 'paused' : item.status);
+        return { ...item, status: nextStatus, health };
+      }));
+      setHealthCheckedAt(typeof data.checkedAt === 'number' ? data.checkedAt : Date.now());
+    } catch (error: any) {
+      setLoadError(error?.message || '实时检测失败');
+    } finally {
+      setIsCheckingHealth(false);
+    }
+  };
 
   const groups = useMemo(() => {
     return Array.from(new Set(items.filter((item) => (item.table || 'resources') === activeTable).map((item) => item.group).filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -148,7 +178,7 @@ export default function KeyUrlPublicTable() {
         </div>
 
         <div className="relative p-5 md:p-8">
-          <div className="mb-5 flex flex-wrap gap-3 rounded-2xl bg-white/45 dark:bg-slate-950/30 border border-white/50 dark:border-slate-800/70 p-2">
+          <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white/45 dark:bg-slate-950/30 border border-white/50 dark:border-slate-800/70 p-2">
             <button
               onClick={() => setActiveTable('resources')}
               className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'resources' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
@@ -160,6 +190,13 @@ export default function KeyUrlPublicTable() {
               className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'lowend' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
             >
               低端模型表
+            </button>
+            <button
+              onClick={() => checkHealth(activeTable)}
+              disabled={isCheckingHealth}
+              className="ml-auto inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-600 transition hover:bg-emerald-500/15 disabled:opacity-60 dark:text-emerald-300"
+            >
+              <RefreshCw size={15} className={isCheckingHealth ? 'animate-spin' : ''} /> {isCheckingHealth ? '实时检测中' : '实时检测延迟'}
             </button>
           </div>
 
@@ -187,6 +224,7 @@ export default function KeyUrlPublicTable() {
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-black text-slate-500 dark:text-slate-400">
             <span>{filteredItems.length} / {items.length} 条记录</span>
             {updatedAt && <span>更新于：{new Date(updatedAt).toLocaleString()}</span>}
+            {healthCheckedAt && <span className="text-emerald-600 dark:text-emerald-300">实时延迟检测：{new Date(healthCheckedAt).toLocaleTimeString()}</span>}
             {activeTable === 'resources' ? (
               <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-300"><Star size={13} /> 高亮为已标注内容</span>
             ) : (
