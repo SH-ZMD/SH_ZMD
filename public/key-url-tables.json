@@ -1,20 +1,94 @@
 {
   "items": [
     {
+      "id": "3d6a55be-f500-4db6-b096-4dbe52dc924e",
+      "table": "resources",
+      "name": "HK",
+      "key": "sk-QfS2s5eynNipQyX7dpCHFktogoaggDuabZ6pVzjsjUVvV4wW",
+      "url": "https://api.hkzhang.cc.cd/v1",
+      "group": "未检测",
+      "status": "active",
+      "tags": [
+        "需魔法"
+      ],
+      "note": "https://api.hkzhang.cc.cd/register?aff=Xh6o",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1781531061872,
+      "updatedAt": 1781531128210
+    },
+    {
+      "id": "6f57388c-f2b8-484e-8a5d-52ab55e15d1d",
+      "table": "resources",
+      "name": "247",
+      "key": "sk-TH1Y5EiS3PTF0BBhPmHXFiboiz3iPDtHOdBZa45yGR8qnjqQ",
+      "url": "https://api.247kan.com/v1",
+      "group": "未检测",
+      "status": "active",
+      "tags": [
+        "需魔法"
+      ],
+      "note": "https://api.247kan.com/sign-up?aff=icbD",
+      "markedFields": [],
+      "health": {
+        "state": "ok",
+        "checkedAt": 1781530999467,
+        "latencyMs": 4583,
+        "statusCode": 200,
+        "message": "接口可达"
+      },
+      "createdAt": 1781530509410,
+      "updatedAt": 1781531128210
+    },
+    {
+      "id": "27a62647-d773-452a-aff2-87a783611f66",
+      "table": "resources",
+      "name": "Donk",
+      "key": "sk-B9YGmGaD7ONwL8NR9stC5lF2IPa780LklnKhJNH5UiO4GF21",
+      "url": "https://newapi.donkicode.top/v1",
+      "group": "未检测",
+      "status": "paused",
+      "tags": [],
+      "note": "https://newapi.donkicode.top/sign-up?aff=VqmY",
+      "markedFields": [],
+      "health": {
+        "state": "error",
+        "checkedAt": 1781530999467,
+        "latencyMs": 8042,
+        "statusCode": null,
+        "message": "<urlopen error _ssl.c:989: The handshake operation timed out>"
+      },
+      "createdAt": 1781530290126,
+      "updatedAt": 1781531128210
+    },
+    {
       "id": "0c73d256-4247-4790-ac16-787dd658884f",
       "table": "resources",
       "name": "Grok",
       "key": "sk-5HP2fAvAx0Ni0VWMXUE0zNoTKB7txyXEPJtmTjuGoxtL9uEK",
       "url": "http://agishidai.cc.cd/v1",
       "group": "Grok能用",
-      "status": "paused",
+      "status": "active",
       "tags": [
         "没额度了"
       ],
       "note": "目前只有Grok4.3High和dpV4flash\n\nhttp://agishidai.cc.cd/sign-up?aff=8BR4",
       "markedFields": [],
+      "health": {
+        "state": "ok",
+        "checkedAt": 1781530999468,
+        "latencyMs": 4400,
+        "statusCode": 401,
+        "message": "接口可达"
+      },
       "createdAt": 1781438167985,
-      "updatedAt": 1781457263472
+      "updatedAt": 1781531128210
     },
     {
       "id": "72b7c7c4-39f5-4500-b2e2-9b3f2e9bdec9",
@@ -23,14 +97,21 @@
       "key": "sk-SvYS8j0KW1DvbEhQMuyX2vscz1vNlX468sezNP9lPYaQ9gI0",
       "url": "http://cheap-host1.cheapyun.com:16781/v1",
       "group": "glm5.1",
-      "status": "testing",
+      "status": "active",
       "tags": [
         "暂时只有glm5.1"
       ],
       "note": "http://cheap-host1.cheapyun.com:16781/register?aff=6RJh\n\n很有潜力的站点，大家可以注册一下",
       "markedFields": [],
+      "health": {
+        "state": "ok",
+        "checkedAt": 1781531003869,
+        "latencyMs": 207,
+        "statusCode": 200,
+        "message": "接口可达"
+      },
       "createdAt": 1781380213731,
-      "updatedAt": 1781457263472
+      "updatedAt": 1781531128210
     },
     {
       "id": "2e1051e3-570a-4160-8d93-95c8d26650a4",
@@ -45,8 +126,15 @@
       ],
       "note": "https://chatapi.riyuemedia.cn:16689/login?aff=MMYN5ZYXSU2L\n\n听我的，注册一个，你会需要的",
       "markedFields": [],
+      "health": {
+        "state": "ok",
+        "checkedAt": 1781531004050,
+        "latencyMs": 255,
+        "statusCode": 200,
+        "message": "接口可达"
+      },
       "createdAt": 1781380146360,
-      "updatedAt": 1781457263472
+      "updatedAt": 1781531128210
     },
     {
       "id": "99bba942-2e39-4ea4-86d9-831867e5c1d2",
@@ -55,57 +143,22 @@
       "key": "sk-LJuump1Oou1TYe5w7aSZSNlHIBVaikXLDml1nR8LnOlK7Vsh",
       "url": "https://free.liunian.ai.moe5200.com/",
       "group": "GPT",
-      "status": "paused",
+      "status": "active",
       "tags": [
         "超快"
       ],
       "note": "https://free.liunian.ai.moe5200.com/sign-up?aff=N96b\n\n如果未来你想要使用AI，我建议每个人都注册一个这个",
       "markedFields": [],
+      "health": {
+        "state": "ok",
+        "checkedAt": 1781531004077,
+        "latencyMs": 6622,
+        "statusCode": 200,
+        "message": "接口可达"
+      },
       "createdAt": 1781379472700,
-      "updatedAt": 1781457263472
-    },
-    {
-      "id": "low-001",
-      "table": "lowend",
-      "name": "低端模型A",
-      "key": "sk-abc123...def456",
-      "url": "https://low-end-a.example.com/v1",
-      "group": "低端模型",
-      "status": "paused",
-      "tags": [],
-      "note": "",
-      "markedFields": [],
-      "createdAt": 1781380000000,
-      "updatedAt": 1781380000000
-    },
-    {
-      "id": "low-002",
-      "table": "lowend",
-      "name": "低端模型B",
-      "key": "sk-xyz789...123",
-      "url": "https://low-end-b.example.com/v1",
-      "group": "低端模型",
-      "status": "paused",
-      "tags": [],
-      "note": "",
-      "markedFields": [],
-      "createdAt": 1781380000000,
-      "updatedAt": 1781380000000
-    },
-    {
-      "id": "low-003",
-      "table": "lowend",
-      "name": "低端模型C",
-      "key": "sk-111222...999",
-      "url": "https://low-end-c.example.com/v1",
-      "group": "低端模型",
-      "status": "archived",
-      "tags": [],
-      "note": "",
-      "markedFields": [],
-      "createdAt": 1781380000000,
-      "updatedAt": 1781380000000
+      "updatedAt": 1781531128210
     }
   ],
-  "updatedAt": 1781465415154
+  "updatedAt": 1781531128210
 }
