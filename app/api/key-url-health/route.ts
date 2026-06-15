@@ -11,7 +11,7 @@ type KeyUrlItem = {
 };
 
 const HEALTHY_STATUS_CODES = new Set([200, 401, 403]);
-const CHECK_TIMEOUT_MS = 8000;
+const CHECK_TIMEOUT_MS = 4000;
 const MAX_CONCURRENCY = 3;
 
 function json(data: unknown, status = 200) {

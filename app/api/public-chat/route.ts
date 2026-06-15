@@ -17,7 +17,7 @@ type KeyUrlItem = {
   status?: string;
   health?: { state?: string; latencyMs?: number | null };
 };
-type AiEndpoint = { id: string; name: string; baseUrl: string; apiKey: string; source: 'resource' | 'env'; latencyMs?: number | null };
+type AiEndpoint = { id: string; name: string; baseUrl: string; apiKey: string; source: 'resource' | 'env'; latencyMs?: number | null; healthy?: boolean };
 
 const aiConfig = (siteConfig.geminiConfig || {}) as {
   provider?: 'gemini' | 'openai-compatible';
@@ -275,6 +275,26 @@ async function checkEndpoint(endpoint: AiEndpoint) {
   }
 }
 
+async function rankEndpointsByLiveLatency(endpoints: AiEndpoint[]) {
+  if (endpoints.length <= 1) return endpoints;
+
+  const checked = await Promise.all(endpoints.map(async (endpoint) => {
+    const status = await checkEndpoint(endpoint);
+    return {
+      ...endpoint,
+      healthy: status.ok,
+      latencyMs: typeof status.latencyMs === 'number' ? status.latencyMs : endpoint.latencyMs ?? null,
+    };
+  }));
+
+  return checked.sort((a, b) => {
+    const aHealthy = a.healthy ? 0 : 1;
+    const bHealthy = b.healthy ? 0 : 1;
+    if (aHealthy !== bHealthy) return aHealthy - bHealthy;
+    return (a.latencyMs ?? 999999) - (b.latencyMs ?? 999999);
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const limited = checkRateLimit(getClientKey(req));
@@ -290,7 +310,7 @@ export async function POST(req: Request) {
     if (imageDataUrl && (!imageDataUrl.startsWith('data:image/') || estimateDataUrlBytes(imageDataUrl) > MAX_IMAGE_BYTES)) return json({ error: '识图图片过大或格式不正确。浏览器/平台请求体有上限，请压缩后再上传。' }, 413);
     if ((aiConfig.provider || 'openai-compatible') !== 'openai-compatible') return json({ error: '公开 AI 聊天目前使用 OpenAI-compatible 接口。' }, 500);
 
-    const endpoints = await getAiEndpoints();
+    const endpoints = await rankEndpointsByLiveLatency(await getAiEndpoints());
     if (!endpoints.length) return json({ error: `没有可用 AI Key：资源库没有完整 Key，且环境变量 ${aiConfig.apiKeyEnv || 'SH_GPT'} 未配置。` }, 500);
 
     const failures: string[] = [];

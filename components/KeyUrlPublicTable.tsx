@@ -48,9 +48,9 @@ function fieldMarked(item: KeyUrlItem, field: MarkField) {
   return Array.isArray(item.markedFields) && item.markedFields.includes(field);
 }
 
-function latencyText(health?: KeyHealth) {
-  if (typeof health?.latencyMs !== 'number') return '延迟未测';
-  return `${health.latencyMs}ms`;
+function latencyText(health?: KeyHealth, isChecking = false) {
+  if (typeof health?.latencyMs === 'number') return `${health.latencyMs}ms`;
+  return isChecking ? '检测中…' : '延迟未测';
 }
 
 function healthTitle(health?: KeyHealth) {
@@ -274,7 +274,7 @@ export default function KeyUrlPublicTable() {
                     <td className="px-5 py-4">
                       {(() => {
                         const status = statusMeta[item.status] || statusMeta.active;
-                        return <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health)}</span></span>;
+                        return <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span></span>;
                       })()}
                     </td>
                     <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-rose-500/15 to-fuchsia-500/15 dark:from-rose-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-rose-700 dark:text-rose-200 border border-rose-400/25 shadow-sm"><span className="text-rose-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
@@ -327,7 +327,7 @@ export default function KeyUrlPublicTable() {
                         </div>
                       </td>
                       <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
-                      <td className="px-5 py-4"><span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health)}</span></span></td>
+                      <td className="px-5 py-4"><span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span></span></td>
                       <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 dark:from-indigo-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-indigo-700 dark:text-indigo-200 border border-indigo-400/25 shadow-sm"><span className="text-indigo-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
                       <td className={`px-5 py-4 ${fieldMarked(item, 'note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 font-medium">{item.note || '—'}</p></td>
                     </tr>
@@ -359,7 +359,7 @@ export default function KeyUrlPublicTable() {
               </thead>
               <tbody>
                 {(() => {
-                  const lowItems = items.filter(i => i.group === '低端模型');
+                  const lowItems = items.filter(i => (i.table || 'resources') === 'lowend');
                   if (lowItems.length === 0) {
                     return <tr><td colSpan={3} className="px-5 py-12 text-center text-sm font-black text-slate-400">暂无低端模型记录</td></tr>;
                   }
@@ -395,7 +395,7 @@ export default function KeyUrlPublicTable() {
                         <td className="px-5 py-4">
                           <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1 text-xs font-black ${status.className}`}>
                             <span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span>
-                            <span className="text-[10px] opacity-75">{latencyText(item.health)}</span>
+                            <span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span>
                           </span>
                         </td>
                       </tr>
