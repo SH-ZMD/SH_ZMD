@@ -55,6 +55,11 @@ export default function Navbar() {
 
   // 控制 PC 端导航栏
   useEffect(() => {
+    if (pathname === '/guestbook' || pathname === '/guestbook/') {
+      setShowNav(true);
+      return;
+    }
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
       if (currentScrollY > lastScrollY && currentScrollY > 80) {
@@ -66,7 +71,7 @@ export default function Navbar() {
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, pathname]);
 
   const primaryNavLinks = [
     { name: '首页', href: '/' },
