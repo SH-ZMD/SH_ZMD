@@ -35,6 +35,8 @@ const REQUEST_COOLDOWN_MS = 0;
 const WINDOW_MS = 10 * 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = Number.MAX_SAFE_INTEGER;
 const requestWindows = new Map<string, { windowStart: number; count: number; lastAt: number }>();
+const ENDPOINT_RANK_CACHE_TTL_MS = 60 * 1000;
+let endpointRankCache: { expiresAt: number; endpoints: AiEndpoint[] } | null = null;
 
 const MODEL_ALLOWLIST = [
   { id: aiConfig.modelId || 'gpt-5.4', label: '站长默认 GPT' },
@@ -275,6 +277,32 @@ async function checkEndpoint(endpoint: AiEndpoint) {
   }
 }
 
+function sortEndpointsByKnownHealth(endpoints: AiEndpoint[]) {
+  return [...endpoints].sort((a, b) => {
+    const aKnownFast = a.source === 'resource' && typeof a.latencyMs === 'number' ? 0 : 1;
+    const bKnownFast = b.source === 'resource' && typeof b.latencyMs === 'number' ? 0 : 1;
+    if (aKnownFast !== bKnownFast) return aKnownFast - bKnownFast;
+    return (a.latencyMs ?? 999999) - (b.latencyMs ?? 999999);
+  });
+}
+
+async function rankEndpointsForChat(endpoints: AiEndpoint[]) {
+  const now = Date.now();
+  if (endpointRankCache && endpointRankCache.expiresAt > now) {
+    const liveIds = new Set(endpoints.map((endpoint) => endpoint.id));
+    const cached = endpointRankCache.endpoints.filter((endpoint) => liveIds.has(endpoint.id));
+    const cachedIds = new Set(cached.map((endpoint) => endpoint.id));
+    const missing = endpoints.filter((endpoint) => !cachedIds.has(endpoint.id));
+    return [...cached, ...sortEndpointsByKnownHealth(missing)];
+  }
+
+  // Fast path for normal chat: trust the last saved health/latency from the Key / URL table.
+  // Doing a live GET /models scan before every message makes the conversation feel slow.
+  const ranked = sortEndpointsByKnownHealth(endpoints);
+  endpointRankCache = { expiresAt: now + ENDPOINT_RANK_CACHE_TTL_MS, endpoints: ranked };
+  return ranked;
+}
+
 async function rankEndpointsByLiveLatency(endpoints: AiEndpoint[]) {
   if (endpoints.length <= 1) return endpoints;
 
@@ -287,12 +315,14 @@ async function rankEndpointsByLiveLatency(endpoints: AiEndpoint[]) {
     };
   }));
 
-  return checked.sort((a, b) => {
+  const ranked = checked.sort((a, b) => {
     const aHealthy = a.healthy ? 0 : 1;
     const bHealthy = b.healthy ? 0 : 1;
     if (aHealthy !== bHealthy) return aHealthy - bHealthy;
     return (a.latencyMs ?? 999999) - (b.latencyMs ?? 999999);
   });
+  endpointRankCache = { expiresAt: Date.now() + ENDPOINT_RANK_CACHE_TTL_MS, endpoints: ranked };
+  return ranked;
 }
 
 export async function POST(req: Request) {
@@ -310,7 +340,7 @@ export async function POST(req: Request) {
     if (imageDataUrl && (!imageDataUrl.startsWith('data:image/') || estimateDataUrlBytes(imageDataUrl) > MAX_IMAGE_BYTES)) return json({ error: '识图图片过大或格式不正确。浏览器/平台请求体有上限，请压缩后再上传。' }, 413);
     if ((aiConfig.provider || 'openai-compatible') !== 'openai-compatible') return json({ error: '公开 AI 聊天目前使用 OpenAI-compatible 接口。' }, 500);
 
-    const endpoints = await rankEndpointsByLiveLatency(await getAiEndpoints());
+    const endpoints = await rankEndpointsForChat(await getAiEndpoints());
     if (!endpoints.length) return json({ error: `没有可用 AI Key：资源库没有完整 Key，且环境变量 ${aiConfig.apiKeyEnv || 'SH_GPT'} 未配置。` }, 500);
 
     const failures: string[] = [];
@@ -335,6 +365,20 @@ export async function GET(req: Request) {
   const checkedEndpoints = shouldCheck
     ? await Promise.all(endpoints.map((endpoint) => checkEndpoint(endpoint)))
     : endpoints.map((item) => ({ name: item.name, source: item.source, ok: item.source === 'resource' ? item.latencyMs !== null : true, latencyMs: item.latencyMs ?? null, statusCode: null, message: '待检测' }));
+  if (shouldCheck) {
+    endpointRankCache = {
+      expiresAt: Date.now() + ENDPOINT_RANK_CACHE_TTL_MS,
+      endpoints: endpoints.map((endpoint) => {
+        const status = checkedEndpoints.find((item) => item.name === endpoint.name && item.source === endpoint.source);
+        return { ...endpoint, healthy: status?.ok, latencyMs: typeof status?.latencyMs === 'number' ? status.latencyMs : endpoint.latencyMs ?? null };
+      }).sort((a, b) => {
+        const aHealthy = a.healthy ? 0 : 1;
+        const bHealthy = b.healthy ? 0 : 1;
+        if (aHealthy !== bHealthy) return aHealthy - bHealthy;
+        return (a.latencyMs ?? 999999) - (b.latencyMs ?? 999999);
+      }),
+    };
+  }
   return json({
     status: 'ready',
     models: MODEL_ALLOWLIST,
