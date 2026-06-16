@@ -1,6 +1,29 @@
 {
   "items": [
     {
+      "id": "37f84d69-7fd4-4040-866e-422fe691ed6d",
+      "table": "resources",
+      "name": "君公益",
+      "key": "sk-9zcQGWLMTS6mu64m6d0QiKt0FvFbkA9ogPoZHkUwhQevWtE7",
+      "url": "https://muyuan.do/v1",
+      "group": "claude",
+      "status": "active",
+      "tags": [
+        "不稳定"
+      ],
+      "note": "claude老师，我们记得你",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1781583478932,
+      "updatedAt": 1781583524597
+    },
+    {
       "id": "3d6a55be-f500-4db6-b096-4dbe52dc924e",
       "table": "resources",
       "name": "HK",
@@ -15,13 +38,13 @@
       "markedFields": [],
       "health": {
         "state": "ok",
-        "checkedAt": 1781536900353,
-        "latencyMs": 1640,
+        "checkedAt": 1781541347757,
+        "latencyMs": 1069,
         "statusCode": 200,
         "message": "接口可达"
       },
       "createdAt": 1781531061872,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     },
     {
       "id": "6f57388c-f2b8-484e-8a5d-52ab55e15d1d",
@@ -30,21 +53,21 @@
       "key": "sk-TH1Y5EiS3PTF0BBhPmHXFiboiz3iPDtHOdBZa45yGR8qnjqQ",
       "url": "https://api.247kan.com/v1",
       "group": "未检测",
-      "status": "paused",
+      "status": "active",
       "tags": [
         "需魔法"
       ],
       "note": "https://api.247kan.com/sign-up?aff=icbD",
       "markedFields": [],
       "health": {
-        "state": "bad",
-        "checkedAt": 1781536900354,
-        "latencyMs": 1115,
-        "statusCode": 502,
-        "message": "HTTP 502"
+        "state": "ok",
+        "checkedAt": 1781541347757,
+        "latencyMs": 991,
+        "statusCode": 200,
+        "message": "接口可达"
       },
       "createdAt": 1781530509410,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     },
     {
       "id": "27a62647-d773-452a-aff2-87a783611f66",
@@ -59,13 +82,13 @@
       "markedFields": [],
       "health": {
         "state": "ok",
-        "checkedAt": 1781536900354,
-        "latencyMs": 319,
+        "checkedAt": 1781541347801,
+        "latencyMs": 291,
         "statusCode": 200,
         "message": "接口可达"
       },
       "createdAt": 1781530290126,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     },
     {
       "id": "0c73d256-4247-4790-ac16-787dd658884f",
@@ -74,7 +97,7 @@
       "key": "sk-5HP2fAvAx0Ni0VWMXUE0zNoTKB7txyXEPJtmTjuGoxtL9uEK",
       "url": "http://agishidai.cc.cd/v1",
       "group": "Grok能用",
-      "status": "paused",
+      "status": "active",
       "tags": [
         "没额度了"
       ],
@@ -82,13 +105,13 @@
       "markedFields": [],
       "health": {
         "state": "ok",
-        "checkedAt": 1781536900674,
-        "latencyMs": 129,
+        "checkedAt": 1781541348093,
+        "latencyMs": 190,
         "statusCode": 401,
         "message": "接口可达"
       },
       "createdAt": 1781438167985,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     },
     {
       "id": "72b7c7c4-39f5-4500-b2e2-9b3f2e9bdec9",
@@ -105,13 +128,13 @@
       "markedFields": [],
       "health": {
         "state": "ok",
-        "checkedAt": 1781536900804,
-        "latencyMs": 422,
+        "checkedAt": 1781541348283,
+        "latencyMs": 270,
         "statusCode": 200,
         "message": "接口可达"
       },
       "createdAt": 1781380213731,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     },
     {
       "id": "2e1051e3-570a-4160-8d93-95c8d26650a4",
@@ -128,13 +151,13 @@
       "markedFields": [],
       "health": {
         "state": "ok",
-        "checkedAt": 1781536901227,
-        "latencyMs": 211,
+        "checkedAt": 1781541348554,
+        "latencyMs": 231,
         "statusCode": 200,
         "message": "接口可达"
       },
       "createdAt": 1781380146360,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     },
     {
       "id": "99bba942-2e39-4ea4-86d9-831867e5c1d2",
@@ -151,14 +174,14 @@
       "markedFields": [],
       "health": {
         "state": "ok",
-        "checkedAt": 1781536901439,
-        "latencyMs": 660,
+        "checkedAt": 1781541348749,
+        "latencyMs": 651,
         "statusCode": 200,
         "message": "接口可达"
       },
       "createdAt": 1781379472700,
-      "updatedAt": 1781537764784
+      "updatedAt": 1781583524597
     }
   ],
-  "updatedAt": 1781537764784
+  "updatedAt": 1781583524597
 }

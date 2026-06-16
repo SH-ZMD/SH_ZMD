@@ -167,7 +167,7 @@ export default function KeyUrlPublicTable() {
                 Key 与链接资源表
               </h1>
               <p className="mt-4 max-w-3xl text-sm md:text-base leading-7 text-slate-600 dark:text-slate-300 font-medium">
-                集中展示服务地址、推广链接和模型 Key。低端模型表只保留 URL、Key、状态；状态里会显示检测延迟。
+                集中展示服务地址、推广链接和模型 Key。检测会实际发起一次对话；能回复才算可用，响应时间越短越好。
               </p>
             </div>
             <div className="rounded-3xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs leading-6 text-amber-700 dark:text-amber-200 max-w-md">
@@ -196,7 +196,7 @@ export default function KeyUrlPublicTable() {
               disabled={isCheckingHealth}
               className="ml-auto inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-600 transition hover:bg-emerald-500/15 disabled:opacity-60 dark:text-emerald-300"
             >
-              <RefreshCw size={15} className={isCheckingHealth ? 'animate-spin' : ''} /> {isCheckingHealth ? '实时检测中' : '实时检测延迟'}
+              <RefreshCw size={15} className={isCheckingHealth ? 'animate-spin' : ''} /> {isCheckingHealth ? '对话测速中' : '实际对话测速'}
             </button>
           </div>
 

@@ -15,6 +15,9 @@ type KeyUrlItem = {
   key?: string;
   url?: string;
   status?: string;
+  tags?: string[];
+  note?: string;
+  group?: string;
   health?: { state?: string; latencyMs?: number | null };
 };
 type AiEndpoint = { id: string; name: string; baseUrl: string; apiKey: string; source: 'resource' | 'env'; latencyMs?: number | null; healthy?: boolean };
@@ -103,6 +106,11 @@ function isUsableKey(value?: string) {
   return !key.includes('...') && !key.includes('****') && !key.includes('••') && !key.includes('***');
 }
 
+function hasQuotaExhaustedMarker(item: KeyUrlItem) {
+  const text = [item.name, item.group, item.note, ...(item.tags || [])].join(' ').toLowerCase();
+  return ['没额度', '无额度', '余额不足', '没余额', '额度用完', 'no quota', 'quota', 'insufficient_quota'].some((keyword) => text.includes(keyword.toLowerCase()));
+}
+
 async function readResourceEndpoints(): Promise<AiEndpoint[]> {
   try {
     const file = path.join(process.cwd(), 'public', 'key-url-tables.json');
@@ -111,7 +119,7 @@ async function readResourceEndpoints(): Promise<AiEndpoint[]> {
     const items: KeyUrlItem[] = Array.isArray(data?.items) ? data.items : [];
     return items
       .filter((item) => (item.table || 'resources') === 'resources')
-      .filter((item) => ['active', 'testing'].includes(String(item.status || '')))
+      .filter((item) => ['active', 'testing'].includes(String(item.status || '')) && !hasQuotaExhaustedMarker(item))
       .filter((item) => item.url && isUsableKey(item.key))
       .sort((a, b) => {
         const ah = a.health?.state === 'ok' ? 0 : 1;

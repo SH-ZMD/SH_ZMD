@@ -13,6 +13,7 @@ type KeyUrlItem = {
 const HEALTHY_STATUS_CODES = new Set([200, 401, 403]);
 const CHECK_TIMEOUT_MS = 4000;
 const MAX_CONCURRENCY = 3;
+const QUOTA_EXHAUSTED_KEYWORDS = ['没额度', '无额度', '余额不足', '没余额', '额度用完', 'no quota', 'quota', 'insufficient_quota'];
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -38,6 +39,11 @@ function isUsableKey(value?: string) {
   return !key.includes('...') && !key.includes('****') && !key.includes('••') && !key.includes('***');
 }
 
+function hasQuotaExhaustedMarker(item: KeyUrlItem) {
+  const text = [item.name, (item as any).group, (item as any).note, ...(((item as any).tags || []) as string[])].join(' ').toLowerCase();
+  return QUOTA_EXHAUSTED_KEYWORDS.some((keyword) => text.includes(keyword.toLowerCase()));
+}
+
 async function readItems(): Promise<KeyUrlItem[]> {
   const file = path.join(process.cwd(), 'public', 'key-url-tables.json');
   const raw = await readFile(file, 'utf-8');
@@ -47,6 +53,9 @@ async function readItems(): Promise<KeyUrlItem[]> {
 
 async function checkOne(item: KeyUrlItem) {
   const started = Date.now();
+  if (hasQuotaExhaustedMarker(item)) {
+    return { id: item.id, state: 'bad', latencyMs: null, statusCode: null, message: '已标记没额度，跳过可用判定', checkedAt: Date.now() };
+  }
   const url = modelsUrl(item.url);
   if (!url) {
     return { id: item.id, state: 'unknown', latencyMs: null, statusCode: null, message: '缺少 URL', checkedAt: Date.now() };
@@ -70,7 +79,7 @@ async function checkOne(item: KeyUrlItem) {
       state: ok ? 'ok' : 'bad',
       latencyMs,
       statusCode: response.status,
-      message: ok ? '接口可达' : `HTTP ${response.status}`,
+      message: ok ? '接口可达（不代表有余额）' : `HTTP ${response.status}`,
       checkedAt: Date.now(),
     };
   } catch (error: any) {
