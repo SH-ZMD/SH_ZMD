@@ -31,11 +31,32 @@ type KeyUrlItem = {
   updatedAt: number;
 };
 
-const statusMeta: Record<ItemStatus, { label: string; className: string; dot: string }> = {
+type KeyUrlTableData = {
+  items?: KeyUrlItem[];
+  updatedAt?: number;
+};
+
+type KeyUrlHealthResponse = {
+  success?: boolean;
+  error?: string;
+  checkedAt?: number;
+  results?: KeyHealth[];
+};
+
+type DisplayStatus = { label: string; className: string; dot: string };
+
+const statusMeta: Record<ItemStatus, DisplayStatus> = {
   active: { label: '使用中', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20', dot: 'bg-emerald-500' },
   testing: { label: '测试', className: 'bg-sky-500/10 text-sky-600 dark:text-sky-300 border-sky-500/20', dot: 'bg-sky-500' },
   paused: { label: '暂停', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/20', dot: 'bg-amber-500' },
   archived: { label: '归档', className: 'bg-slate-500/10 text-slate-500 dark:text-slate-300 border-slate-500/20', dot: 'bg-slate-400' },
+};
+
+const healthStatusMeta: Record<KeyHealth['state'], DisplayStatus> = {
+  ok: { label: '可用', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20', dot: 'bg-emerald-500' },
+  bad: { label: '不可用', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/20', dot: 'bg-rose-500' },
+  error: { label: '异常', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/20', dot: 'bg-amber-500' },
+  unknown: { label: '未检测', className: 'bg-slate-500/10 text-slate-500 dark:text-slate-300 border-slate-500/20', dot: 'bg-slate-400' },
 };
 
 function maskSecret(value: string) {
@@ -62,6 +83,15 @@ function healthTitle(health?: KeyHealth) {
   return parts.join(' · ');
 }
 
+function displayStatusMeta(item: KeyUrlItem) {
+  if (item.health?.state) return healthStatusMeta[item.health.state] || healthStatusMeta.unknown;
+  return statusMeta[item.status] || statusMeta.active;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? (error.message || fallback) : fallback;
+}
+
 export default function KeyUrlPublicTable() {
   const [items, setItems] = useState<KeyUrlItem[]>([]);
   const [activeTable, setActiveTable] = useState<TableType>('resources');
@@ -84,20 +114,24 @@ export default function KeyUrlPublicTable() {
       try {
         const res = await fetch(`/key-url-tables.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) throw new Error('没有找到公开表格数据');
-        const data = await res.json();
+        const data = await res.json() as KeyUrlTableData;
         if (!cancelled) {
           setItems(Array.isArray(data.items) ? data.items.map((item: KeyUrlItem) => ({ ...item, table: item.table || 'resources' })) : []);
           setUpdatedAt(typeof data.updatedAt === 'number' ? data.updatedAt : null);
           window.setTimeout(() => checkHealth(), 350);
         }
-      } catch (error: any) {
-        if (!cancelled) setLoadError(error?.message || '读取表格失败');
+      } catch (error: unknown) {
+        if (!cancelled) setLoadError(getErrorMessage(error, '读取表格失败'));
       } finally {
         if (!cancelled) setIsLoading(false);
       }
     };
     load();
-    return () => { cancelled = true; };
+    const timer = window.setInterval(() => checkHealth(), 20 * 60 * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,9 +142,9 @@ export default function KeyUrlPublicTable() {
     try {
       const query = table ? `?table=${table}&t=${Date.now()}` : `?t=${Date.now()}`;
       const res = await fetch(`/api/key-url-health${query}`, { cache: 'no-store' });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch(() => ({})) as KeyUrlHealthResponse;
       if (!res.ok || !data?.success) throw new Error(data?.error || '实时检测失败');
-      const healthById = new Map((data.results || []).map((result: any) => [result.id, result]));
+      const healthById = new Map((data.results || []).map((result) => [result.id, result]));
       setItems((prev) => prev.map((item) => {
         const health = healthById.get(item.id) as KeyHealth | undefined;
         if (!health) return item;
@@ -120,8 +154,8 @@ export default function KeyUrlPublicTable() {
         return { ...item, status: nextStatus, health };
       }));
       setHealthCheckedAt(typeof data.checkedAt === 'number' ? data.checkedAt : Date.now());
-    } catch (error: any) {
-      setLoadError(error?.message || '实时检测失败');
+    } catch (error: unknown) {
+      setLoadError(getErrorMessage(error, '实时检测失败'));
     } finally {
       setIsCheckingHealth(false);
     }
@@ -273,7 +307,7 @@ export default function KeyUrlPublicTable() {
                     <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
                     <td className="px-5 py-4">
                       {(() => {
-                        const status = statusMeta[item.status] || statusMeta.active;
+                        const status = displayStatusMeta(item);
                         return <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span></span>;
                       })()}
                     </td>
@@ -304,7 +338,7 @@ export default function KeyUrlPublicTable() {
                 ) : filteredItems.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-16 text-center text-sm font-black text-slate-400">暂无可展示记录。</td></tr>
                 ) : filteredItems.map((item) => {
-                  const status = statusMeta[item.status] || statusMeta.active;
+                  const status = displayStatusMeta(item);
                   return (
                     <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 align-top hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
                       <td className="px-5 py-4">
@@ -364,7 +398,7 @@ export default function KeyUrlPublicTable() {
                     return <tr><td colSpan={3} className="px-5 py-12 text-center text-sm font-black text-slate-400">暂无低端模型记录</td></tr>;
                   }
                   return lowItems.map((item) => {
-                    const status = statusMeta[item.status] || statusMeta.active;
+                    const status = displayStatusMeta(item);
                     return (
                       <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
                         <td className="px-5 py-4">
