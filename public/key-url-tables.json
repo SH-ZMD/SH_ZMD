@@ -7,19 +7,19 @@
       "key": "sk-9zcQGWLMTS6mu64m6d0QiKt0FvFbkA9ogPoZHkUwhQevWtE7",
       "url": "https://muyuan.do/v1",
       "group": "低端模型",
-      "status": "paused",
+      "status": "active",
       "tags": [],
       "note": "",
       "markedFields": [],
       "health": {
-        "state": "bad",
-        "checkedAt": 1781584406654,
-        "latencyMs": 662,
-        "statusCode": 503,
-        "message": "对话失败(gpt-4o-mini): No available channel for model gpt-4o-mini under group default (distributor) (request id: 202606160433262275543978268d9d6017nmG36)"
+        "state": "ok",
+        "checkedAt": 1781591774548,
+        "latencyMs": 5319,
+        "statusCode": 200,
+        "message": "实际对话成功(claude-opus-4-8)"
       },
       "createdAt": 1781583827525,
-      "updatedAt": 1781584409372
+      "updatedAt": 1781591779868
     },
     {
       "id": "9e383c46-eeb3-4b9a-8ac5-91d1e216c48f",
@@ -204,5 +204,5 @@
       "updatedAt": 1781584409372
     }
   ],
-  "updatedAt": 1781584409372
+  "updatedAt": 1781591779868
 }
