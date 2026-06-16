@@ -42,9 +42,12 @@ const ENDPOINT_RANK_CACHE_TTL_MS = 60 * 1000;
 let endpointRankCache: { expiresAt: number; endpoints: AiEndpoint[] } | null = null;
 
 const MODEL_ALLOWLIST = [
+  { id: 'gpt-5.5', label: 'GPT-5.5' },
+  { id: 'gpt-5.4', label: 'GPT-5.4' },
+  { id: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
   { id: aiConfig.modelId || 'gpt-5.4', label: '站长默认 GPT' },
-  { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-  { id: 'gpt-4o', label: 'GPT-4o / 识图' },
+  { id: 'gpt-4o', label: 'GPT-4o / 识图备用' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o mini 备用' },
 ];
 
 const REASONING_PROMPTS: Record<ReasoningLevel, string> = {

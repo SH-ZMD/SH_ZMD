@@ -26,9 +26,11 @@ const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 200000;
 
 const MODELS = [
-  { id: 'gpt-5.4', label: '站长默认 GPT' },
-  { id: 'gpt-4o-mini', label: 'GPT-4o mini' },
-  { id: 'gpt-4o', label: 'GPT-4o / 识图' },
+  { id: 'gpt-5.5', label: 'GPT-5.5' },
+  { id: 'gpt-5.4', label: 'GPT-5.4' },
+  { id: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
+  { id: 'gpt-4o', label: 'GPT-4o / 识图备用' },
+  { id: 'gpt-4o-mini', label: 'GPT-4o mini 备用' },
 ];
 
 const REASONING_OPTIONS: { id: ReasoningLevel; label: string; desc: string }[] = [
