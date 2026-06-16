@@ -20,7 +20,7 @@ type KeyUrlItem = {
   group?: string;
   health?: { state?: string; latencyMs?: number | null };
 };
-type AiEndpoint = { id: string; name: string; baseUrl: string; apiKey: string; source: 'resource' | 'env'; latencyMs?: number | null; healthy?: boolean };
+type AiEndpoint = { id: string; name: string; baseUrl: string; apiKey: string; source: 'resource' | 'lowend' | 'env'; latencyMs?: number | null; healthy?: boolean };
 
 const aiConfig = (siteConfig.geminiConfig || {}) as {
   provider?: 'gemini' | 'openai-compatible';
@@ -121,22 +121,25 @@ async function readResourceEndpoints(): Promise<AiEndpoint[]> {
     const data = JSON.parse(raw);
     const items: KeyUrlItem[] = Array.isArray(data?.items) ? data.items : [];
     return items
-      .filter((item) => (item.table || 'resources') === 'resources')
+      .filter((item) => ['resources', 'lowend'].includes(item.table || 'resources'))
       .filter((item) => ['active', 'testing'].includes(String(item.status || '')) && !hasQuotaExhaustedMarker(item))
       .filter((item) => item.url && isUsableKey(item.key))
       .sort((a, b) => {
+        const at = (a.table || 'resources') === 'lowend' ? 1 : 0;
+        const bt = (b.table || 'resources') === 'lowend' ? 1 : 0;
+        if (at !== bt) return at - bt;
         const ah = a.health?.state === 'ok' ? 0 : 1;
         const bh = b.health?.state === 'ok' ? 0 : 1;
         if (ah !== bh) return ah - bh;
         return (a.health?.latencyMs ?? 999999) - (b.health?.latencyMs ?? 999999);
       })
-      .slice(0, 8)
+      .slice(0, 12)
       .map((item) => ({
         id: item.id || item.name || item.url || 'resource',
-        name: item.name || item.group || '资源库 Key',
+        name: item.name || item.group || ((item.table || 'resources') === 'lowend' ? '低端模型 Key' : '资源库 Key'),
         baseUrl: String(item.url || '').trim(),
         apiKey: String(item.key || '').trim(),
-        source: 'resource' as const,
+        source: ((item.table || 'resources') === 'lowend' ? 'lowend' : 'resource') as const,
         latencyMs: item.health?.latencyMs ?? null,
       }));
   } catch {
@@ -237,11 +240,12 @@ function buildPayloadMessages(messages: PublicChatMessage[], reasoningLevel: Rea
   return payloadMessages;
 }
 
-async function callEndpoint(endpoint: AiEndpoint, model: string, messages: PublicChatMessage[], reasoningLevel: ReasoningLevel, imageDataUrl?: string) {
+async function callEndpoint(endpoint: AiEndpoint, model: string, messages: PublicChatMessage[], reasoningLevel: ReasoningLevel, imageDataUrl?: string, signal?: AbortSignal) {
   const started = Date.now();
   const response = await fetch(joinUrl(endpoint.baseUrl, 'chat/completions'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${endpoint.apiKey}` },
+    signal,
     body: JSON.stringify({
       model,
       messages: buildPayloadMessages(messages, reasoningLevel, imageDataUrl),
@@ -258,23 +262,24 @@ async function callEndpoint(endpoint: AiEndpoint, model: string, messages: Publi
   return { reply, latencyMs: Date.now() - started };
 }
 
-async function checkEndpoint(endpoint: AiEndpoint) {
+async function checkEndpoint(endpoint: AiEndpoint, model: string) {
   const started = Date.now();
   try {
-    const response = await fetch(joinUrl(endpoint.baseUrl, 'models'), {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${endpoint.apiKey}`, 'User-Agent': 'sh-zmd-ai-endpoint-checker/1.0' },
-      signal: AbortSignal.timeout(8000),
-    });
-    const latencyMs = Date.now() - started;
-    const reachable = [200, 401, 403].includes(response.status);
+    const result = await callEndpoint(
+      endpoint,
+      model,
+      [{ role: 'user', content: 'Reply only OK. This is an API key health check.' }],
+      'quick',
+      undefined,
+      AbortSignal.timeout(12000),
+    );
     return {
       name: endpoint.name,
       source: endpoint.source,
-      ok: reachable,
-      latencyMs,
-      statusCode: response.status,
-      message: reachable ? '接口可达' : `HTTP ${response.status}`,
+      ok: true,
+      latencyMs: result.latencyMs,
+      statusCode: 200,
+      message: `实际对话成功：${model}`,
     };
   } catch (error: any) {
     return {
@@ -283,7 +288,7 @@ async function checkEndpoint(endpoint: AiEndpoint) {
       ok: false,
       latencyMs: Date.now() - started,
       statusCode: null,
-      message: error?.message || '检测失败',
+      message: `实际对话失败：${error?.message || '检测失败'}`,
     };
   }
 }
@@ -373,8 +378,9 @@ export async function GET(req: Request) {
   const endpoints = await getAiEndpoints();
   const url = new URL(req.url);
   const shouldCheck = url.searchParams.get('check') === '1';
+  const model = pickModel(url.searchParams.get('model'));
   const checkedEndpoints = shouldCheck
-    ? await Promise.all(endpoints.map((endpoint) => checkEndpoint(endpoint)))
+    ? await Promise.all(endpoints.map((endpoint) => checkEndpoint(endpoint, model)))
     : endpoints.map((item) => ({ name: item.name, source: item.source, ok: item.source === 'resource' ? item.latencyMs !== null : true, latencyMs: item.latencyMs ?? null, statusCode: null, message: '待检测' }));
   if (shouldCheck) {
     endpointRankCache = {

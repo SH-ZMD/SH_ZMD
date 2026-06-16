@@ -15,7 +15,7 @@ type ChatMessage = {
 
 type EndpointStatus = {
   name: string;
-  source: 'resource' | 'env';
+  source: 'resource' | 'lowend' | 'env';
   ok: boolean;
   latencyMs?: number | null;
   statusCode?: number | null;
@@ -24,6 +24,7 @@ type EndpointStatus = {
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 200000;
+const AUTO_CHECK_INTERVAL_MS = 20 * 60 * 1000;
 
 const MODELS = [
   { id: 'gpt-5.5', label: 'GPT-5.5' },
@@ -45,6 +46,12 @@ function uid() {
 
 function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+function endpointSourceLabel(source: EndpointStatus['source']) {
+  if (source === 'lowend') return '低端模型';
+  if (source === 'env') return '环境变量';
+  return '资源表';
 }
 
 export default function PublicAiChat() {
@@ -78,7 +85,7 @@ export default function PublicAiChat() {
     setIsCheckingEndpoints(true);
     setError('');
     try {
-      const res = await fetch('/api/public-chat?check=1', { cache: 'no-store' });
+      const res = await fetch(`/api/public-chat?check=1&model=${encodeURIComponent(model)}`, { cache: 'no-store' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || '检测失败');
       setEndpoints(Array.isArray(data?.endpoints) ? data.endpoints : []);
@@ -91,7 +98,9 @@ export default function PublicAiChat() {
 
   useEffect(() => {
     checkEndpoints();
-  }, []);
+    const timer = window.setInterval(checkEndpoints, AUTO_CHECK_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [model]);
 
   async function handleImage(file?: File) {
     setError('');
@@ -215,7 +224,7 @@ export default function PublicAiChat() {
                   <p className="opacity-80">暂未检测到完整资源库 Key，会尝试使用站点默认环境变量；聊天不会保存到服务器。</p>
                 ) : endpoints.map((endpoint) => (
                   <div key={`${endpoint.name}-${endpoint.source}`} className="flex items-center justify-between gap-2 rounded-2xl bg-white/40 px-3 py-2 dark:bg-white/5">
-                    <span className="truncate font-black">{endpoint.name}</span>
+                    <span className="truncate font-black">{endpoint.name} · {endpointSourceLabel(endpoint.source)}</span>
                     <span className={`shrink-0 rounded-full px-2 py-1 font-black ${endpoint.ok ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-rose-500/15 text-rose-600 dark:text-rose-300'}`}>
                       {endpoint.ok ? '可用' : '不可用'} · {typeof endpoint.latencyMs === 'number' ? `${endpoint.latencyMs}ms` : '未测'}
                     </span>
