@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 // 🌟 核心升级：引入 Next.js 现代统一解析流
 import { unified } from 'unified';
@@ -29,7 +30,12 @@ export async function generateStaticParams() {
   if (!fs.existsSync(chattersDirectory)) return [];
   const filenames = fs.readdirSync(chattersDirectory);
   return filenames
-    .filter((name) => name.endsWith('.md'))
+    .filter((name) => {
+      if (!name.endsWith('.md')) return false;
+      const content = fs.readFileSync(path.join(chattersDirectory, name), 'utf8');
+      const { data } = matter(content);
+      return data.hidden !== true;
+    })
     .map((name) => ({
       slug: name.replace(/\.md$/, ''),
     }));
@@ -40,6 +46,7 @@ async function getChatterData(slug: string) {
   const fileContents = fs.readFileSync(fullPath, 'utf8');
 
   let { data, content } = matter(fileContents);
+  if (data.hidden === true) notFound();
 
   // ==========================================
   // 🌟 前台渲染清洗区：终极防吞换行 + 安全保护补丁！（从 Post 完美移植）
@@ -111,8 +118,9 @@ function getRecentChatters(currentSlug: string) {
     const s = f.replace(/\.md$/, '');
     const c = fs.readFileSync(path.join(chattersDirectory, f), 'utf8');
     const { data } = matter(c);
+    if (data.hidden === true) return null;
     return { slug: s, title: data.title || '碎片记录', date: data.date || '1970-01-01' };
-  }).filter(p => p.slug !== currentSlug)
+  }).filter((p): p is any => Boolean(p) && p.slug !== currentSlug)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 3);
 }

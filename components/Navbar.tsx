@@ -84,6 +84,8 @@ export default function Navbar() {
   ];
 
   const moreNavLinks = [
+    { name: '计划表', href: '/plans' },
+    { name: '推荐表', href: '/recommendations' },
     { name: 'AI聊天', href: '/ai-chat' },
     { name: '杂谈', href: '/chatter' },
     { name: '灵境', href: '/tree' },

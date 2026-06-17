@@ -62,7 +62,15 @@ interface MusicContextType {
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
-const MUSIC_CACHE_KEY = `xh-music-playlist-${(siteConfig.cloudMusicIds || []).join('-')}-${(((siteConfig as any).customMusic || []).length)}`;
+const musicSignature = JSON.stringify({
+  ids: siteConfig.cloudMusicIds || [],
+  customMusic: ((siteConfig as any).customMusic || []).map((song: any) => ({
+    id: song?.id,
+    title: song?.title,
+    src: song?.src,
+  })),
+});
+const MUSIC_CACHE_KEY = `xh-music-playlist-v3-${musicSignature}`;
 
 function normalizeSong(song: any, fallbackId: string) {
   return {
@@ -91,6 +99,20 @@ function writeCachedPlaylist(list: any[]) {
   try {
     if (list.length > 0) window.localStorage.setItem(MUSIC_CACHE_KEY, JSON.stringify(list));
   } catch {}
+}
+
+async function readStaticPlaylist() {
+  try {
+    const res = await fetch(`/music-data.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const list = Array.isArray(data?.playlist) ? data.playlist : [];
+    return list
+      .filter((song: any) => song?.src)
+      .map((song: any, index: number) => normalizeSong(song, song?.id || `static_${index}`));
+  } catch {
+    return [];
+  }
 }
 
 export function MusicProvider({ children }: { children: ReactNode }) {
@@ -139,13 +161,15 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           setIsLoading(false);
         }
 
-        const fetchPromises = (siteConfig.cloudMusicIds || []).slice(0, 3).map(id => fetchSong(String(id)));
-        const results = await Promise.all(fetchPromises);
+        const fetchPromises = (siteConfig.cloudMusicIds || []).map(async id => {
+          const song = await fetchSong(String(id));
+          return song ? normalizeSong(song, String(id)) : null;
+        });
+        const results = await Promise.allSettled(fetchPromises);
 
         const neteasePlaylist = results
-          .filter(res => res && (res.src || res.url))
-          .map((res, index) => normalizeSong(res, String((siteConfig.cloudMusicIds || [])[index] || Math.random())))
-          .filter(song => song.src);
+          .map(result => result.status === 'fulfilled' ? result.value : null)
+          .filter((song): song is any => Boolean(song?.src));
 
         const customPlaylist = ((siteConfig as any).customMusic || [])
           .filter((song: any) => song && song.src)
@@ -159,12 +183,14 @@ export function MusicProvider({ children }: { children: ReactNode }) {
             lyrics: song.lrc ? parseLrc(song.lrc) : []
           }));
 
+        const staticPlaylist = await readStaticPlaylist();
         const mergedPlaylist = [...neteasePlaylist, ...customPlaylist];
+        const finalPlaylist = mergedPlaylist.length > 0 ? mergedPlaylist : staticPlaylist;
 
         if (isMounted) {
-          if (mergedPlaylist.length > 0) {
-            setPlaylist(mergedPlaylist);
-            writeCachedPlaylist(mergedPlaylist);
+          if (finalPlaylist.length > 0) {
+            setPlaylist(finalPlaylist);
+            writeCachedPlaylist(finalPlaylist);
           } else if (cachedPlaylist.length === 0) {
             setCurrentLyric("云端链路受阻");
           }
@@ -329,6 +355,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           src={currentSong.src}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleEnded} // 使用我们重写的结束处理
+          onError={nextSong}
           onLoadedMetadata={handleTimeUpdate}
         />
       )}
