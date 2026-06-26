@@ -2,7 +2,7 @@
   "plans": [
     {
       "id": "plan_1782487187977",
-      "title": "",
+      "title": "VS Code",
       "detail": "据说可以整合codex的一些东西。CC Switch经常出错，看看这个会不会更好一些",
       "targetDate": "更新VS Code如何使用",
       "status": "doing",
@@ -10,11 +10,11 @@
       "tags": [],
       "link": "",
       "createdAt": 1782487187977,
-      "updatedAt": 1782487261666
+      "updatedAt": 1782487864943
     },
     {
       "id": "plan_1782487211417",
-      "title": "",
+      "title": "Open Design",
       "detail": "可以做一些很好看的动画  视频 PPT等前端内容",
       "targetDate": "更新Open Design如何使用",
       "status": "todo",
@@ -22,11 +22,11 @@
       "tags": [],
       "link": "",
       "createdAt": 1782487211417,
-      "updatedAt": 1782487277353
+      "updatedAt": 1782487871001
     },
     {
       "id": "plan_1782487281831",
-      "title": "",
+      "title": "终端",
       "detail": "例如powershell之类的 好歹会用终端发条指令",
       "targetDate": "介绍一些常用的计算机知识",
       "status": "todo",
@@ -34,9 +34,9 @@
       "tags": [],
       "link": "",
       "createdAt": 1782487281831,
-      "updatedAt": 1782487321139
+      "updatedAt": 1782487876111
     }
   ],
   "recommendationGroups": [],
-  "updatedAt": 1782487438752
+  "updatedAt": 1782487877940
 }
