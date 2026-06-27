@@ -1,4 +1,28 @@
 {
-  "items": [],
-  "updatedAt": 1782487657980
+  "items": [
+    {
+      "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
+      "table": "resources",
+      "name": "云舟AI",
+      "key": "",
+      "url": "",
+      "group": "付费+半公益",
+      "status": "active",
+      "tags": [
+        "0.1倍率"
+      ],
+      "note": "速度超快，首字在两到四秒，其中也有部分模型0.01公益倍率（glm5.2）https://cli.999554.xyz/register?aff=p95d",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1782575160414,
+      "updatedAt": 1782575260442
+    }
+  ],
+  "updatedAt": 1782575260442
 }
