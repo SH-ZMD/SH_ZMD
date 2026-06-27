@@ -1,19 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, ExternalLink, Eye, EyeOff, Filter, KeyRound, Link2, RefreshCw, Search, ShieldAlert, Sparkles, Star } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, EyeOff, Filter, KeyRound, Link2, Search, ShieldAlert, Sparkles, Star } from 'lucide-react';
 
 type MarkField = 'key' | 'url' | 'note';
 type ItemStatus = 'active' | 'testing' | 'paused' | 'archived';
 type TableType = 'resources' | 'lowend';
-
-type KeyHealth = {
-  state: 'unknown' | 'ok' | 'bad' | 'error';
-  checkedAt?: number | null;
-  latencyMs?: number | null;
-  statusCode?: number | null;
-  message?: string;
-};
 
 type KeyUrlItem = {
   id: string;
@@ -26,7 +18,6 @@ type KeyUrlItem = {
   tags: string[];
   note: string;
   markedFields: MarkField[];
-  health?: KeyHealth;
   createdAt: number;
   updatedAt: number;
 };
@@ -34,13 +25,6 @@ type KeyUrlItem = {
 type KeyUrlTableData = {
   items?: KeyUrlItem[];
   updatedAt?: number;
-};
-
-type KeyUrlHealthResponse = {
-  success?: boolean;
-  error?: string;
-  checkedAt?: number;
-  results?: KeyHealth[];
 };
 
 type DisplayStatus = { label: string; className: string; dot: string };
@@ -52,13 +36,6 @@ const statusMeta: Record<ItemStatus, DisplayStatus> = {
   archived: { label: '归档', className: 'bg-slate-500/10 text-slate-500 dark:text-slate-300 border-slate-500/20', dot: 'bg-slate-400' },
 };
 
-const healthStatusMeta: Record<KeyHealth['state'], DisplayStatus> = {
-  ok: { label: '可用', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20', dot: 'bg-emerald-500' },
-  bad: { label: '不可用', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-300 border-rose-500/20', dot: 'bg-rose-500' },
-  error: { label: '异常', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/20', dot: 'bg-amber-500' },
-  unknown: { label: '未检测', className: 'bg-slate-500/10 text-slate-500 dark:text-slate-300 border-slate-500/20', dot: 'bg-slate-400' },
-};
-
 function maskSecret(value: string) {
   if (!value) return '—';
   if (value.length <= 10) return '•'.repeat(Math.max(value.length, 6));
@@ -67,25 +44,6 @@ function maskSecret(value: string) {
 
 function fieldMarked(item: KeyUrlItem, field: MarkField) {
   return Array.isArray(item.markedFields) && item.markedFields.includes(field);
-}
-
-function latencyText(health?: KeyHealth, isChecking = false) {
-  if (typeof health?.latencyMs === 'number') return `${health.latencyMs}ms`;
-  return isChecking ? '检测中…' : '延迟未测';
-}
-
-function healthTitle(health?: KeyHealth) {
-  if (!health?.checkedAt) return '尚未检测';
-  const parts = [new Date(health.checkedAt).toLocaleString()];
-  if (typeof health.latencyMs === 'number') parts.push(`延迟 ${health.latencyMs}ms`);
-  if (typeof health.statusCode === 'number') parts.push(`HTTP ${health.statusCode}`);
-  if (health.message) parts.push(health.message);
-  return parts.join(' · ');
-}
-
-function displayStatusMeta(item: KeyUrlItem) {
-  if (item.health?.state) return healthStatusMeta[item.health.state] || healthStatusMeta.unknown;
-  return statusMeta[item.status] || statusMeta.active;
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -103,8 +61,6 @@ export default function KeyUrlPublicTable() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
-  const [healthCheckedAt, setHealthCheckedAt] = useState<number | null>(null);
-  const [isCheckingHealth, setIsCheckingHealth] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +74,6 @@ export default function KeyUrlPublicTable() {
         if (!cancelled) {
           setItems(Array.isArray(data.items) ? data.items.map((item: KeyUrlItem) => ({ ...item, table: item.table || 'resources' })) : []);
           setUpdatedAt(typeof data.updatedAt === 'number' ? data.updatedAt : null);
-          window.setTimeout(() => checkHealth(), 350);
         }
       } catch (error: unknown) {
         if (!cancelled) setLoadError(getErrorMessage(error, '读取表格失败'));
@@ -127,39 +82,8 @@ export default function KeyUrlPublicTable() {
       }
     };
     load();
-    const timer = window.setInterval(() => checkHealth(), 20 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { cancelled = true; };
   }, []);
-
-
-  const checkHealth = async (table?: TableType) => {
-    if (isCheckingHealth) return;
-    setIsCheckingHealth(true);
-    try {
-      const query = table ? `?table=${table}&t=${Date.now()}` : `?t=${Date.now()}`;
-      const res = await fetch(`/api/key-url-health${query}`, { cache: 'no-store' });
-      const data = await res.json().catch(() => ({})) as KeyUrlHealthResponse;
-      if (!res.ok || !data?.success) throw new Error(data?.error || '实时检测失败');
-      const healthById = new Map((data.results || []).map((result) => [result.id, result]));
-      setItems((prev) => prev.map((item) => {
-        const health = healthById.get(item.id) as KeyHealth | undefined;
-        if (!health) return item;
-        const nextStatus: ItemStatus = health.state === 'ok'
-          ? 'active'
-          : (health.state === 'bad' || health.state === 'error' ? 'paused' : item.status);
-        return { ...item, status: nextStatus, health };
-      }));
-      setHealthCheckedAt(typeof data.checkedAt === 'number' ? data.checkedAt : Date.now());
-    } catch (error: unknown) {
-      setLoadError(getErrorMessage(error, '实时检测失败'));
-    } finally {
-      setIsCheckingHealth(false);
-    }
-  };
 
   const groups = useMemo(() => {
     return Array.from(new Set(items.filter((item) => (item.table || 'resources') === activeTable).map((item) => item.group).filter(Boolean))).sort((a, b) => a.localeCompare(b));
@@ -201,7 +125,7 @@ export default function KeyUrlPublicTable() {
                 Key 与链接资源表
               </h1>
               <p className="mt-4 max-w-3xl text-sm md:text-base leading-7 text-slate-600 dark:text-slate-300 font-medium">
-                集中展示服务地址、推广链接和模型 Key。检测会实际发起一次对话；能回复才算可用，响应时间越短越好。
+                集中展示服务地址、推广链接和模型 Key。状态由后台手动维护，敏感 Key 仅展示脱敏值。
               </p>
             </div>
             <div className="rounded-3xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs leading-6 text-amber-700 dark:text-amber-200 max-w-md">
@@ -224,13 +148,6 @@ export default function KeyUrlPublicTable() {
               className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'lowend' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
             >
               低端模型表
-            </button>
-            <button
-              onClick={() => checkHealth(activeTable)}
-              disabled={isCheckingHealth}
-              className="ml-auto inline-flex h-10 items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-4 text-sm font-black text-emerald-600 transition hover:bg-emerald-500/15 disabled:opacity-60 dark:text-emerald-300"
-            >
-              <RefreshCw size={15} className={isCheckingHealth ? 'animate-spin' : ''} /> {isCheckingHealth ? '对话测速中' : '实际对话测速'}
             </button>
           </div>
 
@@ -258,11 +175,10 @@ export default function KeyUrlPublicTable() {
           <div className="mb-4 flex flex-wrap items-center gap-3 text-xs font-black text-slate-500 dark:text-slate-400">
             <span>{filteredItems.length} / {items.length} 条记录</span>
             {updatedAt && <span>更新于：{new Date(updatedAt).toLocaleString()}</span>}
-            {healthCheckedAt && <span className="text-emerald-600 dark:text-emerald-300">实时延迟检测：{new Date(healthCheckedAt).toLocaleTimeString()}</span>}
             {activeTable === 'resources' ? (
               <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-300"><Star size={13} /> 高亮为已标注内容</span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表只保留 URL、Key、状态；状态里会显示检测延迟</span>
+              <span className="inline-flex items-center gap-1 text-rose-500">低端模型表只保留 URL、Key、状态</span>
             )}
           </div>
 
@@ -307,8 +223,8 @@ export default function KeyUrlPublicTable() {
                     <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
                     <td className="px-5 py-4">
                       {(() => {
-                        const status = displayStatusMeta(item);
-                        return <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span></span>;
+                        const status = statusMeta[item.status] || statusMeta.active;
+                        return <span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span>;
                       })()}
                     </td>
                     <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-rose-500/15 to-fuchsia-500/15 dark:from-rose-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-rose-700 dark:text-rose-200 border border-rose-400/25 shadow-sm"><span className="text-rose-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
@@ -338,7 +254,7 @@ export default function KeyUrlPublicTable() {
                 ) : filteredItems.length === 0 ? (
                   <tr><td colSpan={7} className="px-5 py-16 text-center text-sm font-black text-slate-400">暂无可展示记录。</td></tr>
                 ) : filteredItems.map((item) => {
-                  const status = displayStatusMeta(item);
+                  const status = statusMeta[item.status] || statusMeta.active;
                   return (
                     <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 align-top hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
                       <td className="px-5 py-4">
@@ -361,7 +277,7 @@ export default function KeyUrlPublicTable() {
                         </div>
                       </td>
                       <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
-                      <td className="px-5 py-4"><span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span><span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span></span></td>
+                      <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span></td>
                       <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 dark:from-indigo-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-indigo-700 dark:text-indigo-200 border border-indigo-400/25 shadow-sm"><span className="text-indigo-400">#</span>{tag}</span>) : <span className="text-slate-400">—</span>}</div></td>
                       <td className={`px-5 py-4 ${fieldMarked(item, 'note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><p className="whitespace-pre-wrap text-sm leading-6 text-slate-600 dark:text-slate-300 font-medium">{item.note || '—'}</p></td>
                     </tr>
@@ -398,7 +314,7 @@ export default function KeyUrlPublicTable() {
                     return <tr><td colSpan={3} className="px-5 py-12 text-center text-sm font-black text-slate-400">暂无低端模型记录</td></tr>;
                   }
                   return lowItems.map((item) => {
-                    const status = displayStatusMeta(item);
+                    const status = statusMeta[item.status] || statusMeta.active;
                     return (
                       <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
                         <td className="px-5 py-4">
@@ -427,9 +343,8 @@ export default function KeyUrlPublicTable() {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          <span title={healthTitle(item.health)} className={`inline-flex flex-col items-start gap-0.5 whitespace-nowrap rounded-2xl border px-3 py-1 text-xs font-black ${status.className}`}>
-                            <span className="inline-flex items-center gap-2"><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span>
-                            <span className="text-[10px] opacity-75">{latencyText(item.health, isCheckingHealth)}</span>
+                          <span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border px-3 py-1 text-xs font-black ${status.className}`}>
+                            <span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}
                           </span>
                         </td>
                       </tr>
