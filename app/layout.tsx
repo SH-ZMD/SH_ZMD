@@ -10,7 +10,7 @@ import LazyClickEffect from "../components/LazyClickEffect";
 import BackgroundSlider from "../components/BackgroundSlider";
 import GlobalToolbox from "../components/GlobalToolbox";
 import SplashScreen from "../components/SplashScreen";
-import LazyCyberCat from '../components/LazyCyberCat';
+// import LazyCyberCat from '../components/LazyCyberCat'; // 暂时停用煤球
 import LazyDanmakuBackground from '../components/LazyDanmakuBackground';
 
 import MobileBackButton from '../components/MobileBackButton';
@@ -117,9 +117,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             `}} />
           </MusicProvider>
 
+          {/* 煤球悬浮猫暂时停用
           <div className="hidden md:block">
             <LazyCyberCat />
           </div>
+          */}
 
         </ThemeProvider>
       </body>

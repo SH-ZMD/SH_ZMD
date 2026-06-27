@@ -81,16 +81,16 @@ export default function Navbar() {
     { name: '说说', href: '/moments' },
     { name: '留言墙', href: '/guestbook' },
     { name: '资源表', href: '/key-urls' },
+    { name: '杂谈', href: '/chatter' },
+    { name: '友链', href: '/friends' },
+    { name: '关于', href: '/about' },
   ];
 
   const moreNavLinks = [
     { name: '计划表', href: '/plans' },
     { name: '推荐表', href: '/recommendations' },
-    { name: 'AI聊天', href: '/ai-chat' },
-    { name: '杂谈', href: '/chatter' },
+    // { name: 'AI聊天', href: '/ai-chat' }, // 暂时停用
     { name: '灵境', href: '/tree' },
-    { name: '友链', href: '/friends' },
-    { name: '关于', href: '/about' },
   ];
 
   const navLinks = [...primaryNavLinks, ...moreNavLinks];
@@ -111,17 +111,18 @@ export default function Navbar() {
               {siteConfig.navAfter || '宝藏之地'}
             </span>
           </Link>
-          <nav className="flex items-center gap-1 rounded-full bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-white/10 px-2 py-1.5 shadow-inner backdrop-blur-xl">
+          <nav className="flex items-center gap-0.5 rounded-full bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-white/10 px-1.5 py-1.5 shadow-inner backdrop-blur-xl">
             {primaryNavLinks.map((link) => {
               const isActive = pathname === link.href || pathname === `${link.href}/`;
               return (
-                <Link key={link.href} href={link.href} className={`whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-black leading-none transition-all ${isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white'}`}>
+                <Link key={link.href} href={link.href} className={`whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-black leading-none transition-all ${isActive ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white'}`}>
                   {link.name}
                 </Link>
               );
             })}
+            <div className="w-px h-5 bg-slate-400/20 dark:bg-white/10 mx-1 shrink-0" />
             <div className="relative group">
-              <button className={`whitespace-nowrap rounded-full px-3.5 py-2 text-[13px] font-black leading-none transition-all ${moreNavLinks.some((link) => pathname === link.href || pathname === `${link.href}/`) ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white'}`}>
+              <button className={`whitespace-nowrap rounded-full px-3 py-2 text-[13px] font-black leading-none transition-all ${moreNavLinks.some((link) => pathname === link.href || pathname === `${link.href}/`) ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-600 dark:text-slate-200 hover:bg-white/60 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white'}`}>
                 更多 ▾
               </button>
               <div className="invisible opacity-0 translate-y-2 group-hover:visible group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200 absolute right-0 top-full mt-3 w-40 rounded-3xl border border-white/50 dark:border-white/10 bg-white/90 dark:bg-slate-950/90 backdrop-blur-2xl shadow-2xl p-2">

@@ -1,6 +1,29 @@
 {
   "items": [
     {
+      "id": "54549f17-a032-4c5d-b10e-015e84b038e0",
+      "table": "resources",
+      "name": "Future",
+      "key": "",
+      "url": "",
+      "group": "纯公益",
+      "status": "active",
+      "tags": [
+        "签到"
+      ],
+      "note": "每天签到领取额度来使用模型，包含国内大多数模型和部分国外模型，但是例如gpt5.5和claude这种实际顶尖的模型基本上没有。尽管如此里面拥有的多种模型还是很有用的，例如gemini的text speech模型可以把文本转声音，或者gpt120b用来翻译文本，速度快且准确度高。\n总之如果有并不太严谨的项目要做，这个站点完全可以用来兜底，记得每天签到\n（注：需要用edu邮箱或者github账号注册）\nhttps://api.futureppo.top/register?aff=5bgD",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1782577338017,
+      "updatedAt": 1782577562472
+    },
+    {
       "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
       "table": "resources",
       "name": "云舟AI",
@@ -21,8 +44,8 @@
         "message": "尚未检测"
       },
       "createdAt": 1782575160414,
-      "updatedAt": 1782575260442
+      "updatedAt": 1782577562472
     }
   ],
-  "updatedAt": 1782575260442
+  "updatedAt": 1782577562472
 }
