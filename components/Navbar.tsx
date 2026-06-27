@@ -80,16 +80,15 @@ export default function Navbar() {
     { name: '音乐', href: '/music' },
     { name: '说说', href: '/moments' },
     { name: '留言墙', href: '/guestbook' },
-    { name: '资源表', href: '/key-urls' },
     { name: '杂谈', href: '/chatter' },
+    { name: '分享表', href: '/share' },
     { name: '友链', href: '/friends' },
     { name: '关于', href: '/about' },
   ];
 
   const moreNavLinks = [
+    { name: '星图', href: '/starmap' },
     { name: '计划表', href: '/plans' },
-    { name: '推荐表', href: '/recommendations' },
-    // { name: 'AI聊天', href: '/ai-chat' }, // 暂时停用
     { name: '灵境', href: '/tree' },
   ];
 
