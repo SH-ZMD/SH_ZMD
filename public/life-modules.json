@@ -5,12 +5,12 @@
       "title": "VS Code",
       "detail": "据说可以整合codex的一些东西。CC Switch经常出错，看看这个会不会更好一些",
       "targetDate": "更新VS Code如何使用",
-      "status": "doing",
-      "priority": "high",
+      "status": "paused",
+      "priority": "low",
       "tags": [],
       "link": "",
       "createdAt": 1782487187977,
-      "updatedAt": 1782487864943
+      "updatedAt": 1782654132570
     },
     {
       "id": "plan_1782487211417",
@@ -35,8 +35,20 @@
       "link": "",
       "createdAt": 1782487281831,
       "updatedAt": 1782487876111
+    },
+    {
+      "id": "plan_1782654134365",
+      "title": "Obsidian",
+      "detail": "记录下我的Agent记录，以后不用再每次项目调整Agent的功能",
+      "targetDate": "",
+      "status": "doing",
+      "priority": "medium",
+      "tags": [],
+      "link": "",
+      "createdAt": 1782654134365,
+      "updatedAt": 1782654160944
     }
   ],
   "recommendationGroups": [],
-  "updatedAt": 1782487877940
+  "updatedAt": 1782654167054
 }
