@@ -47,7 +47,7 @@ export const siteConfig = {
 
 
   // 👇 【新增】：全局背景弹幕配置
-  danmakuList: ["GPT", "玩安慕希...", "在干嘛呢？", "有笨蛋嘛？", "BUG 修复进度 99%", "今天背单词了吗？", "到底在干嘛？"],
+  danmakuList: ["无限Token", "GPT", "玩安慕希...", "在干嘛呢？", "有笨蛋嘛？", "BUG 修复进度 99%", "今天背单词了吗？", "到底在干嘛？"],
   gitalkConfig: {
     clientID: "",
     clientSecret: "",

@@ -1,4 +1,8 @@
 import { NextResponse } from 'next/server';
+import { execFile, spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { promisify } from 'node:util';
 
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
@@ -6,6 +10,9 @@ const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOK
 const PRODUCTION_COMMENT_API = process.env.PRODUCTION_COMMENT_API || 'https://sh-zmd.vercel.app/api/comments';
 const COMMENT_COOLDOWN_MS = 15 * 1000;
 const lastCommentAt = new Map<string, number>();
+const execFileAsync = promisify(execFile);
+
+export const runtime = 'nodejs';
 
 function normalizePageId(pageId: string) {
   return (pageId || '/').replace(/\s+/g, '-').slice(0, 80);
@@ -29,18 +36,116 @@ function checkRateLimit(req: Request) {
   return 0;
 }
 
+function repairMojibakeText(value: string) {
+  if (!/[\u00c0-\u00ff]/.test(value)) return value;
+
+  try {
+    const bytes = Uint8Array.from(Array.from(value), (char) => char.charCodeAt(0) & 0xff);
+    const fixed = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return fixed.includes('\uFFFD') ? value : fixed;
+  } catch {
+    return value;
+  }
+}
+
+function repairCommentText<T>(value: T): T {
+  if (typeof value === 'string') {
+    return repairMojibakeText(value) as T;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => repairCommentText(item)) as T;
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, repairCommentText(item)])
+    ) as T;
+  }
+
+  return value;
+}
+
 function issueTitle(pageId: string) {
   return `[site-comment] ${normalizePageId(pageId)}`;
 }
 
-function githubHeaders(write = false) {
+function readGitCredential(input: string) {
+  return new Promise<string>((resolve) => {
+    const child = spawn('git', ['credential', 'fill'], {
+      windowsHide: true,
+      stdio: ['pipe', 'pipe', 'ignore'],
+    });
+    let stdout = '';
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve('');
+    }, 5000);
+
+    child.stdout.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.on('error', () => {
+      clearTimeout(timer);
+      resolve('');
+    });
+    child.on('close', () => {
+      clearTimeout(timer);
+      resolve(stdout);
+    });
+    child.stdin.end(input);
+  });
+}
+
+async function getWriteToken() {
+  if (TOKEN) return TOKEN;
+
+  try {
+    const envText = await readFile(path.join(process.cwd(), '.env.local'), 'utf-8');
+    const tokenLine = envText
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .find((line) => line.startsWith('COMMENT_GITHUB_TOKEN=') || line.startsWith('GITHUB_COMMENT_TOKEN='));
+    const localToken = tokenLine?.replace(/^[^=]+=/, '').trim().replace(/^["']|["']$/g, '');
+    if (localToken) return localToken;
+  } catch {
+    // Local env file is optional.
+  }
+
+  try {
+    const { stdout } = await execFileAsync('gh', ['auth', 'token'], {
+      windowsHide: true,
+      timeout: 5000,
+    });
+    const ghToken = stdout.trim();
+    if (ghToken) return ghToken;
+  } catch {
+    // GitHub CLI is optional; GitHub Desktop may still have a usable token in git-credential.
+  }
+
+  try {
+    const stdout = await readGitCredential('protocol=https\nhost=github.com\n\n');
+    const passwordLine = stdout
+      .split(/\r?\n/)
+      .find((line) => line.startsWith('password='));
+    const credentialToken = passwordLine?.replace(/^password=/, '').trim();
+    if (credentialToken) return credentialToken;
+  } catch {
+    // No saved GitHub credential available.
+  }
+
+  return '';
+}
+
+function githubHeaders(write = false, token = TOKEN) {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   };
 
-  if (write || TOKEN) {
-    headers.Authorization = `Bearer ${TOKEN}`;
+  if (write || token) {
+    headers.Authorization = `Bearer ${token}`;
   }
 
   return headers;
@@ -63,16 +168,47 @@ async function findIssue(pageId: string) {
 async function proxyProductionComments(req: Request, init?: RequestInit) {
   const incomingUrl = new URL(req.url);
   const targetUrl = `${PRODUCTION_COMMENT_API}${incomingUrl.search || ''}`;
-  const res = await fetch(targetUrl, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers || {}),
-    },
-    cache: 'no-store',
-  });
-  const data = await res.json().catch(() => ({}));
-  return NextResponse.json(data, { status: res.status });
+
+  const fetchViaPowershell = async () => {
+    const script = [
+      "$ProgressPreference = 'SilentlyContinue'",
+      '$wc = New-Object System.Net.WebClient',
+      "$wc.Headers.Add('User-Agent', 'my-blog-manager')",
+      `$bytes = $wc.DownloadData(${JSON.stringify(targetUrl)})`,
+      '[Convert]::ToBase64String($bytes)',
+    ].join('; ');
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', script], {
+      windowsHide: true,
+      timeout: 60000,
+      maxBuffer: 1024 * 1024 * 4,
+    });
+    const data = JSON.parse(Buffer.from(stdout.trim(), 'base64').toString('utf-8') || '{}');
+    return NextResponse.json(repairCommentText(data));
+  };
+
+  if (!init?.method || init.method === 'GET') {
+    try {
+      return await fetchViaPowershell();
+    } catch {
+      // Fall back to Node fetch below.
+    }
+  }
+
+  try {
+    const res = await fetch(targetUrl, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers || {}),
+      },
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(repairCommentText(data), { status: res.status });
+  } catch (error) {
+    if (init?.method && init.method !== 'GET') throw error;
+    return fetchViaPowershell();
+  }
 }
 
 async function findCommentIssues() {
@@ -117,6 +253,23 @@ async function createIssue(pageId: string) {
   return data;
 }
 
+async function deleteGithubComment(commentId: string) {
+  const token = await getWriteToken();
+  if (!token) {
+    throw new Error('本地缺少 GitHub 删除权限。请先登录 GitHub CLI，或配置 COMMENT_GITHUB_TOKEN。');
+  }
+
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: githubHeaders(true, token),
+  });
+
+  if (res.status === 204) return;
+
+  const data = await res.json().catch(() => ({}));
+  throw new Error(data.message || '删除留言失败');
+}
+
 function parseComment(body: string) {
   const match = body.match(/^访客：(.+?)\n\n([\s\S]*)$/);
   if (!match) {
@@ -159,8 +312,8 @@ async function listRecentComments() {
           id: String(item.id),
           pageId,
           pageUrl: pageId.startsWith('/') ? pageId : `/${pageId}`,
-          author: parsed.author,
-          content: parsed.content,
+          author: repairMojibakeText(parsed.author),
+          content: repairMojibakeText(parsed.content),
           parentId: parsed.parentId,
           createdAt: item.created_at,
         };
@@ -185,7 +338,11 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     if (searchParams.get('summary') === '1') {
       try {
-        return NextResponse.json(await listRecentComments());
+        const localSummary = await listRecentComments();
+        if (localSummary.total > 0) {
+          return NextResponse.json(localSummary);
+        }
+        return proxyProductionComments(req);
       } catch {
         return proxyProductionComments(req);
       }
@@ -212,8 +369,8 @@ export async function GET(req: Request) {
       const parsed = parseComment(item.body || '');
       return {
         id: String(item.id),
-        author: parsed.author,
-        content: parsed.content,
+        author: repairMojibakeText(parsed.author),
+        content: repairMojibakeText(parsed.content),
         parentId: parsed.parentId,
         createdAt: item.created_at,
       };
@@ -278,5 +435,22 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || '发送留言失败' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const url = new URL(req.url);
+    const commentId = String(body.commentId || url.searchParams.get('commentId') || '').trim();
+
+    if (!/^\d+$/.test(commentId)) {
+      return NextResponse.json({ error: '留言 ID 不正确。' }, { status: 400 });
+    }
+
+    await deleteGithubComment(commentId);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || '删除留言失败' }, { status: 500 });
   }
 }

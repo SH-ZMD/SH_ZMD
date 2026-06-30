@@ -85,7 +85,31 @@
       ],
       "createdAt": 1782831945371,
       "updatedAt": 1782831977302
+    },
+    {
+      "id": "group_1782834894881",
+      "name": "教程推荐",
+      "description": "特定网站/软件的使用教程(如obsidian教程)，教程来源不局限于网页/视频",
+      "items": [
+        {
+          "id": "rec_1782834894881",
+          "title": "艾文AIGC知识库",
+          "description": "包含大量AI基础知识和AI的基础使用，看完以后可以使AI知识从陌生到入门",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/TEfowFa0hi4ytikar4vc14Z9nwH",
+          "imageUrl": "/image/pasted-1782835036362-316132.webp",
+          "type": "course",
+          "tags": [
+            "公益"
+          ],
+          "rating": 5,
+          "note": "内容非常多，也有obsidian教程这类",
+          "createdAt": 1782834894881,
+          "updatedAt": 1782835050927
+        }
+      ],
+      "createdAt": 1782834894881,
+      "updatedAt": 1782834950153
     }
   ],
-  "updatedAt": 1782832380157
+  "updatedAt": 1782840743974
 }
