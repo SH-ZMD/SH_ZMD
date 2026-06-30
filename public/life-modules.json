@@ -41,14 +41,51 @@
       "title": "Obsidian",
       "detail": "记录下我的Agent记录，以后不用再每次项目调整Agent的功能",
       "targetDate": "",
-      "status": "doing",
+      "status": "paused",
       "priority": "medium",
       "tags": [],
       "link": "",
       "createdAt": 1782654134365,
-      "updatedAt": 1782654160944
+      "updatedAt": 1782663957290
+    },
+    {
+      "id": "plan_1782663958535",
+      "title": "Blender",
+      "detail": "学会怎么使用Blender做简单的建模",
+      "targetDate": "",
+      "status": "todo",
+      "priority": "medium",
+      "tags": [],
+      "link": "",
+      "createdAt": 1782663958535,
+      "updatedAt": 1782663974052
     }
   ],
-  "recommendationGroups": [],
-  "updatedAt": 1782654167054
+  "recommendationGroups": [
+    {
+      "id": "group_1782831945371",
+      "name": "资源分享",
+      "description": "内置大量资源（包含软件分享、学习资料分享、网站分享等等）",
+      "items": [
+        {
+          "id": "rec_1782831945371",
+          "title": "图欧学习导航",
+          "description": "内含有大量夸克网盘与阿里网盘资源（包含学习资料（如四六级）、）和各类AI教程（提示词 3D建模等等各方面均有），软件分享，影视分享，兴趣分享（如下载美食图片）",
+          "url": "https://tuostudy.upnb.top/",
+          "imageUrl": "/image/pasted-1782832015197-80c8b5.webp",
+          "type": "site",
+          "tags": [
+            "公益"
+          ],
+          "rating": 5,
+          "note": "网页像是传销的，但内容质量没得说",
+          "createdAt": 1782831945371,
+          "updatedAt": 1782832176301
+        }
+      ],
+      "createdAt": 1782831945371,
+      "updatedAt": 1782831977302
+    }
+  ],
+  "updatedAt": 1782832380157
 }
