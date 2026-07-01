@@ -109,7 +109,31 @@
       ],
       "createdAt": 1782834894881,
       "updatedAt": 1782834950153
+    },
+    {
+      "id": "group_1782902797805",
+      "name": "Codex分享",
+      "description": "Codex作为AI agent这里面最好用，最容易上手的工具之一，感觉各方面确实值得单独开个分组来介绍，所以这里面我会推荐一些Codex从零到精通再到完全掌握的知识",
+      "items": [
+        {
+          "id": "rec_1782902797805",
+          "title": "Codex第一节——从零到入门",
+          "description": "这是从零开始，看完了解了可以初步掌握Codex是什么，大概怎么用，又该怎么学习。但还没有到可以真实做项目的水平",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/Tx4gwCkdMiB9mrksOmxcVHy1nQc",
+          "imageUrl": "/image/pasted-1782902897671-201bc9.webp",
+          "type": "course",
+          "tags": [
+            "入门"
+          ],
+          "rating": 5,
+          "note": "第一节课",
+          "createdAt": 1782902797805,
+          "updatedAt": 1782902944529
+        }
+      ],
+      "createdAt": 1782902797805,
+      "updatedAt": 1782902861695
     }
   ],
-  "updatedAt": 1782840743974
+  "updatedAt": 1782902947228
 }
