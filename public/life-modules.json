@@ -123,17 +123,62 @@
           "imageUrl": "/image/pasted-1782902897671-201bc9.webp",
           "type": "course",
           "tags": [
-            "入门"
+            "零基础入门"
           ],
           "rating": 5,
           "note": "第一节课",
           "createdAt": 1782902797805,
-          "updatedAt": 1782902944529
+          "updatedAt": 1782907555891
+        },
+        {
+          "id": "rec_1782904701363",
+          "title": "Codex第二节——指令使用",
+          "description": "其中部分指令现已不适用，大家大概知道有哪些指令，明白哪些比较重要即可",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/Y3ZlwD4PXi2uMIkaebyclgs5nDb",
+          "imageUrl": "/image/pasted-1782904803038-3cf17b.webp",
+          "type": "course",
+          "tags": [
+            "入门到熟悉"
+          ],
+          "rating": 5,
+          "note": "第二节课",
+          "createdAt": 1782904701363,
+          "updatedAt": 1782907696968
+        },
+        {
+          "id": "rec_1782907504311",
+          "title": "Codex第三节——插件、MCP、Skill",
+          "description": "插件和MCP在第三方API（用key登录）可能没有办法使用，目前可以使用的应该只有Skill，另外的集中等后续我找到好的工具以后再分享",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/LMYvw8x5Ji5mnZk9vMncHdEUnwe",
+          "imageUrl": "/image/pasted-1782907689199-4ec46f.webp",
+          "type": "course",
+          "tags": [
+            "熟悉"
+          ],
+          "rating": 5,
+          "note": "第三节课",
+          "createdAt": 1782907504311,
+          "updatedAt": 1782907689229
+        },
+        {
+          "id": "rec_1782908528951",
+          "title": "Codex专项分享——PPT篇",
+          "description": "Codex做出非常好看的PPT还得看image2模型，但是用image2也有些痛点，比如图片无法编辑等等。一般我们选择着眼于skill拆分图片和精进提示词工程来解决",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/EaaPwlZd8iz9WRkrRTvcH1T2nGf",
+          "imageUrl": "/image/pasted-1782908629701-6d2475.webp",
+          "type": "course",
+          "tags": [
+            "PPT"
+          ],
+          "rating": 5,
+          "note": "专项课",
+          "createdAt": 1782908528951,
+          "updatedAt": 1782908642132
         }
       ],
       "createdAt": 1782902797805,
       "updatedAt": 1782902861695
     }
   ],
-  "updatedAt": 1782902947228
+  "updatedAt": 1782908645612
 }
