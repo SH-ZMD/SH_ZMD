@@ -307,7 +307,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
 
       <AnimatePresence>
         {editing && (
-          <div className="fixed inset-0 z-[180] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/55 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.97 }} className="relative grid max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/30 bg-white/95 shadow-2xl dark:border-white/10 dark:bg-slate-950/95 lg:grid-cols-[1fr_420px]">
               <div className="overflow-y-auto p-5 md:p-7">
@@ -357,7 +357,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
                   <Search size={15} className="text-slate-400" />
                   <input value={sourceQuery} onChange={(e) => setSourceQuery(e.target.value)} className="w-full bg-transparent text-sm outline-none dark:text-white" placeholder={`搜索${typeMeta[sourceTab].label}`} />
                 </label>
-                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pb-24 pr-1">
                   {loadingSources ? (
                     <div className="py-16 text-center text-xs font-black text-slate-400">加载可选内容中...</div>
                   ) : sourceItems.length === 0 ? (
