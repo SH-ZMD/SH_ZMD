@@ -14,6 +14,7 @@ export type OperationType =
   | 'sync_friends'
   | 'sync_projects'
   | 'sync_life_modules'
+  | 'sync_key_url_tables'
   | 'sync_archive_collections'
   | 'create_moment';
 

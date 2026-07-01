@@ -1,6 +1,52 @@
 {
   "items": [
     {
+      "id": "56102b3a-9a1f-4bb7-b39c-930c36ff8520",
+      "table": "resources",
+      "name": "WorldClawPro",
+      "key": "",
+      "url": "",
+      "group": "付费",
+      "status": "active",
+      "tags": [
+        "0.04-0.06Pro"
+      ],
+      "note": "真的吓哭了，0.06倍率的Pro，价格比市面底价低了快一半，我测过以后发现他的纯度竟然是市面上最高的（要知道除了官方我都没见过这么纯的站） 首字在三秒到十秒之间，还算不错哇https://worldclawpro.ai/register?aff=weKt",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1782916593643,
+      "updatedAt": 1782918198975
+    },
+    {
+      "id": "96e83640-cf1f-4c07-b1eb-d0bbec5b950e",
+      "table": "resources",
+      "name": "蝶祈云",
+      "key": "",
+      "url": "",
+      "group": "付费",
+      "status": "active",
+      "tags": [
+        "0.05~0.12倍率"
+      ],
+      "note": "速度不错，首字也在两秒到六秒，主要有低价pro，0.1~0.12倍率的pro综合下来大概0.1元/M，而且群主很好（可爱）。随时在，出了问题随时修并随时给补偿https://www.dieqiyun.top/register?aff=NLECFTNWCJ77",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1782916219630,
+      "updatedAt": 1782918198975
+    },
+    {
       "id": "54549f17-a032-4c5d-b10e-015e84b038e0",
       "table": "resources",
       "name": "Future",
@@ -21,7 +67,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1782577338017,
-      "updatedAt": 1782577562472
+      "updatedAt": 1782918198975
     },
     {
       "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
@@ -44,8 +90,8 @@
         "message": "尚未检测"
       },
       "createdAt": 1782575160414,
-      "updatedAt": 1782577562472
+      "updatedAt": 1782918198975
     }
   ],
-  "updatedAt": 1782577562472
+  "updatedAt": 1782918198975
 }
