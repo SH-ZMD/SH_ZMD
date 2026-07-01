@@ -3,14 +3,14 @@
     {
       "id": "plan_1782487187977",
       "title": "VS Code",
-      "detail": "据说可以整合codex的一些东西。CC Switch经常出错，看看这个会不会更好一些",
+      "detail": "",
       "targetDate": "更新VS Code如何使用",
-      "status": "paused",
+      "status": "doing",
       "priority": "low",
       "tags": [],
       "link": "",
       "createdAt": 1782487187977,
-      "updatedAt": 1782654132570
+      "updatedAt": 1782914569279
     },
     {
       "id": "plan_1782487211417",
@@ -180,5 +180,5 @@
       "updatedAt": 1782902861695
     }
   ],
-  "updatedAt": 1782908645612
+  "updatedAt": 1782914667986
 }
