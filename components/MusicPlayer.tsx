@@ -1,284 +1,301 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Pause, SkipBack, SkipForward, Repeat, Shuffle, RefreshCcw, ListMusic, Mic2, Disc3, Volume2, VolumeX, Search, X, MessageSquare } from 'lucide-react';
+import Navbar from './Navbar';
+import PageTransition from './PageTransition';
+import { useMusic } from './MusicProvider';
+import Comments from './Comments';
 
-// 安全解析 LRC 歌词
-function parseLrc(lrcText: string) {
-  if (!lrcText || lrcText.length > 20000) return [];
-  const lines = lrcText.split('\n');
-  const result = [];
-  for (let line of lines) {
-    const matches = [...line.matchAll(/\[(\d{2,}):(\d{2})(?:\.(\d{2,3}))?\]/g)];
-    if (matches.length > 0) {
-      const text = line.replace(/\[\d{2,}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
-      if (text) {
-        for (const match of matches) {
-          const min = parseInt(match[1]);
-          const sec = parseInt(match[2]);
-          const ms = match[3] ? parseInt(match[3]) : 0;
-          const time = min * 60 + sec + ms / (match[3] && match[3].length === 3 ? 1000 : 100);
-          result.push({ time, text });
+export default function MusicPage() {
+  const {
+    playlist, currentSong, isPlaying, progress, currentTime, duration, currentLyric,
+    isLoading, togglePlay, nextSong, prevSong, handleSeek,
+    playSong, selectSong,
+    playMode, togglePlayMode,
+    volume, setVolume, isMuted, toggleMute
+  } = useMusic();
+
+  const lyricContainerRef = useRef<HTMLDivElement>(null);
+  const activeLyricRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<'lyrics' | 'playlist'>('lyrics');
+  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // ================= 歌词解析器 =================
+  const parsedLyrics = useMemo(() => {
+    if (!currentSong) return [];
+    if (Array.isArray(currentSong.lyrics) && currentSong.lyrics.length > 0) return currentSong.lyrics;
+    const rawLrc = currentSong.lrc || currentSong.lyric || (typeof currentSong.lyrics === 'string' ? currentSong.lyrics : '');
+    if (typeof rawLrc === 'string' && rawLrc.trim().length > 0) {
+      const lines = rawLrc.split('\n');
+      const parsed: { time: number; text: string }[] = [];
+      const timeExp = /\[(\d{2,}):(\d{2})(?:[.:](\d{2,3}))?\]/g;
+      let hasValidTime = false;
+      for (const line of lines) {
+        const text = line.replace(/\[\d{2,}:\d{2}(?:[.:]\d{2,3})?\]/g, '').trim();
+        if (!text) continue;
+        let match;
+        const tempMatches = [];
+        while ((match = timeExp.exec(line)) !== null) {
+          hasValidTime = true;
+          const min = parseInt(match[1], 10);
+          const sec = parseInt(match[2], 10);
+          const ms = match[3] ? parseFloat(`0.${match[3]}`) : 0;
+          tempMatches.push(min * 60 + sec + ms);
         }
+        if (tempMatches.length > 0) tempMatches.forEach(time => parsed.push({ time, text }));
+      }
+      if (hasValidTime && parsed.length > 0) {
+          parsed.sort((a, b) => a.time - b.time);
+          return parsed;
       }
     }
-  }
-  return result.sort((a, b) => a.time - b.time);
-}
+    return [];
+  }, [currentSong]);
 
-const formatTime = (time: number) => {
-  if (!time || isNaN(time)) return "00:00";
-  const m = Math.floor(time / 60).toString().padStart(2, '0');
-  const s = Math.floor(time % 60).toString().padStart(2, '0');
-  return `${m}:${s}`;
-};
-
-export default function CloudPlayer({ songIds }: { songIds: string[] }) {
-  const [playlist, setPlaylist] = useState<any[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [lyrics, setLyrics] = useState<{ time: number; text: string }[]>([]);
-
-  const [currentLyric, setCurrentLyric] = useState("正在连接高可用神经云端...");
-  const [displayedLyric, setDisplayedLyric] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const activeLyricIndex = useMemo(() => {
+    if (!parsedLyrics.length) return -1;
+    let idx = parsedLyrics.findIndex((l: { time: number; text: string }) => l.time > currentTime) - 1;
+    if (idx === -2) idx = parsedLyrics.length - 1;
+    return Math.max(0, idx);
+  }, [currentTime, parsedLyrics]);
 
   useEffect(() => {
-    let isMounted = true;
-    const fetchMusicData = async () => {
-      try {
-        const fetchPromises = songIds.map(id =>
-          fetch(`https://api.injahow.cn/meting/?server=netease&type=song&id=${id}`)
-            .then(res => { if (!res.ok) throw new Error("API 异常"); return res.json(); })
-            .catch(err => null)
-        );
-        const results = await Promise.all(fetchPromises);
-        const mergedPlaylist = results
-          .filter(res => res && res.length > 0)
-          .map(res => {
-            const song = res[0];
-            return {
-              id: song.id,
-              title: song.name || '未知歌曲',
-              artist: song.artist || '未知歌手',
-              cover: song.cover || 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300',
-              src: song.url,
-              lrcUrl: song.lrc
-            };
-          })
-          .filter(song => song.src);
-
-        if (isMounted) {
-          if (mergedPlaylist.length > 0) {
-            setPlaylist(mergedPlaylist);
-          } else {
-            setCurrentLyric("音乐流被拦截，可能是版权限制");
-          }
-          setIsLoading(false);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setCurrentLyric("云端连接失败，请检查网络");
-          setIsLoading(false);
-        }
-      }
-    };
-
-    if (songIds && songIds.length > 0) fetchMusicData();
-    else { setIsLoading(false); setCurrentLyric("请配置 cloudMusicIds"); }
-    return () => { isMounted = false; };
-  }, [songIds]);
-
-  useEffect(() => {
-    if (playlist.length === 0) return;
-    let isMounted = true;
-    const currentSong = playlist[currentIndex];
-    setCurrentLyric("正在解析歌词...");
-    setLyrics([]);
-
-    if (currentSong.lrcUrl) {
-      fetch(currentSong.lrcUrl)
-        .then(res => { if (!res.ok) throw new Error("失败"); return res.text(); })
-        .then(text => {
-          if (isMounted) {
-            setLyrics(parseLrc(text));
-            setCurrentLyric("♪ 歌词加载完毕 ♪");
-          }
-        })
-        .catch(() => { if (isMounted) setCurrentLyric("♪ 纯享音乐 ♪"); });
-    } else {
-      setCurrentLyric("♪ 纯音乐，请欣赏 ♪");
+    if (activeLyricRef.current && activeTab === 'lyrics') {
+      activeLyricRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+  }, [activeLyricIndex, activeTab]);
 
-    if (isPlaying && audioRef.current) {
-      setTimeout(() => audioRef.current?.play().catch(() => setIsPlaying(false)), 150);
-    }
-    return () => { isMounted = false; };
-  }, [currentIndex, playlist]);
+  const formatTime = (time: number) => {
+    if (!time || isNaN(time)) return "0:00";
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
-  useEffect(() => {
-    setDisplayedLyric("");
-    let i = 0;
-    const typingInterval = setInterval(() => {
-      if (i < currentLyric.length) {
-        setDisplayedLyric((prev) => prev + currentLyric.charAt(i));
-        i++;
-      } else {
-        clearInterval(typingInterval);
-      }
-    }, 40);
-    return () => clearInterval(typingInterval);
-  }, [currentLyric]);
-
-  const togglePlay = () => {
-    if (audioRef.current) {
-      if (isPlaying) audioRef.current.pause();
-      else audioRef.current.play().catch(() => setIsPlaying(false));
-      setIsPlaying(!isPlaying);
+  const getPlayModeIcon = () => {
+    switch (playMode) {
+      case 'loop': return <Repeat size={20} className="text-slate-500 hover:text-indigo-500" />;
+      case 'single': return <RefreshCcw size={20} className="text-indigo-500" />;
+      case 'random': return <Shuffle size={20} className="text-slate-500 hover:text-indigo-500" />;
+      default: return <Repeat size={20} className="text-slate-500" />;
     }
   };
 
-  const nextSong = () => setCurrentIndex((prev) => (prev + 1) % playlist.length);
-  const prevSong = () => setCurrentIndex((prev) => (prev - 1 + playlist.length) % playlist.length);
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      const { currentTime, duration } = audioRef.current;
-      setCurrentTime(currentTime);
-      setDuration(duration || 0);
-      setProgress((currentTime / (duration || 1)) * 100);
-
-      if (lyrics.length > 0) {
-        const activeLyric = lyrics.slice().reverse().find(l => currentTime >= l.time);
-        if (activeLyric && activeLyric.text !== currentLyric) {
-          setCurrentLyric(activeLyric.text);
-        }
-      }
-    }
+  const handlePlaySong = (index: number) => {
+    if (typeof playSong === 'function') playSong(index);
+    else if (typeof selectSong === 'function') selectSong(index);
   };
 
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newProgress = Number(e.target.value);
-    setProgress(newProgress);
-    if (audioRef.current && audioRef.current.duration) {
-      audioRef.current.currentTime = (newProgress / 100) * audioRef.current.duration;
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
+  const filteredPlaylist = useMemo(() => {
+    if (!searchQuery.trim()) return playlist;
+    const lowerQuery = searchQuery.toLowerCase();
+    return playlist.filter((song: any) =>
+      (song.title || song.name || '').toLowerCase().includes(lowerQuery) ||
+      (song.artist || song.author || '').toLowerCase().includes(lowerQuery)
+    );
+  }, [playlist, searchQuery]);
 
-  if (isLoading) {
+  if (isLoading || !currentSong) {
     return (
-      <div className="md:col-span-5 rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 flex flex-col items-center justify-center transition-colors duration-700 h-[220px]">
-        <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        {/* 【修改点】：文字加入 dark:text-white */}
-        <span className="text-slate-800 dark:text-white font-bold tracking-widest animate-pulse text-sm">CONNECTING...</span>
+      <div className="min-h-screen relative pb-32 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center animate-pulse gap-4">
+          <Disc3 size={48} className="text-indigo-500 animate-spin" />
+          <span className="font-black text-slate-500 tracking-widest text-sm">唤醒音频引擎中...</span>
+        </div>
       </div>
     );
   }
 
-  if (playlist.length === 0) {
-    return (
-      <div className="md:col-span-5 rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 flex flex-col items-center justify-center h-[220px] transition-colors duration-700">
-        <span className="text-slate-600 dark:text-slate-300 font-bold mb-2">云端音乐加载失败</span>
-      </div>
-    );
-  }
-
-  const currentSong = playlist[currentIndex];
+  const songCover = currentSong.cover || currentSong.pic || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=1000&auto=format&fit=crop";
 
   return (
-    <>
-      <style>{`
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #6366f1; cursor: pointer; transition: transform 0.1s; }
-        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
-        @keyframes safeWave { 0%, 100% { height: 4px; } 50% { height: 28px; } }
-        .safe-wave { animation: safeWave 1s ease-in-out infinite; transform-origin: bottom; will-change: height; }
-        @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-        .animate-cursor { animation: cursorBlink 0.8s step-end infinite; }
-      `}</style>
+    <div className="min-h-screen relative pb-10 flex flex-col">
+      {/* 动态背景 */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-[-10%] bg-cover bg-center transition-all duration-1000 blur-[50px] opacity-40 dark:opacity-20 saturate-150" style={{ backgroundImage: `url(${songCover})` }} />
+        <div className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-sm" />
+      </div>
 
-      {/* 音乐播放器卡片主体：加入 dark 模式背景适配 */}
-      <div className="md:col-span-5 rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 flex flex-col justify-between transition-all duration-700 hover:scale-[1.02] relative group overflow-hidden min-h-[220px]">
-        <audio ref={audioRef} src={currentSong.src} onTimeUpdate={handleTimeUpdate} onEnded={nextSong} onLoadedMetadata={handleTimeUpdate} />
-        <div className={`absolute -top-20 -right-20 w-48 h-48 bg-indigo-500/20 blur-[50px] rounded-full transition-opacity duration-1000 ${isPlaying ? 'opacity-100' : 'opacity-30'}`}></div>
+      <Navbar />
 
-        <div className="flex items-center gap-5 relative z-10 mb-6 mt-2">
-          <div className={`w-20 h-20 rounded-full border-2 border-white/50 shadow-lg flex-shrink-0 overflow-hidden relative ${isPlaying ? 'animate-[spin_6s_linear_infinite]' : ''}`}>
-            <img src={currentSong.cover} alt="cover" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/10"></div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-white/80 backdrop-blur-sm rounded-full border border-gray-300 shadow-inner"></div>
+      <PageTransition>
+        <div className="w-full max-w-7xl mx-auto mt-28 px-4 sm:px-10 relative z-10">
+          <div className="animate-fade-in-up mb-10">
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-widest mb-2">云端乐律</h1>
+            <p className="text-slate-600 dark:text-slate-400 font-medium tracking-wider">在代码的缝隙中寻找灵魂的共鸣</p>
           </div>
-          <div className="flex-col overflow-hidden w-full">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-black text-indigo-500 dark:text-indigo-400 tracking-widest uppercase bg-white/50 dark:bg-slate-900/50 px-2 py-0.5 rounded-sm shadow-sm transition-colors duration-700">Cloud Music</span>
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-white/40 dark:bg-slate-700/50 px-2 rounded-full transition-colors duration-700">{currentIndex + 1} / {playlist.length}</span>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 w-full items-stretch h-[calc(100vh-250px)] min-h-[600px]">
+
+            {/* ================= 左侧：控制台 ================= */}
+            <div className="md:col-span-5 h-full flex flex-col bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[32px] shadow-2xl p-10 relative overflow-hidden transition-all duration-500">
+              <div className="flex-1 flex flex-col items-center justify-center relative z-10 w-full overflow-hidden">
+                <div className="relative w-56 h-56 lg:w-72 lg:h-72 flex-shrink-0 aspect-square mb-10 flex items-center justify-center">
+                   <div className={`absolute inset-0 m-auto w-[100%] h-[100%] bg-indigo-500/30 blur-[40px] rounded-full transition-opacity duration-1000 z-0 ${isPlaying ? 'opacity-80 scale-110' : 'opacity-20 scale-100'}`}></div>
+                   <div className="absolute inset-0 m-auto w-full h-full rounded-full shadow-[0_0_60px_-15px_rgba(99,102,241,0.5)] z-0"></div>
+                   <motion.div className={`absolute inset-0 w-full h-full rounded-full border-[8px] border-white/80 dark:border-slate-600/80 shadow-2xl overflow-hidden transition-transform duration-700 z-10 ${isPlaying ? 'scale-100' : 'scale-95'}`} style={{ animation: isPlaying ? 'spin 20s linear infinite' : 'none' }}>
+                     <img src={songCover} alt="cover" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                     <div className="absolute inset-0 m-auto w-14 h-14 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md rounded-full z-30 shadow-inner border border-slate-300 dark:border-slate-700"></div>
+                     <div className="absolute inset-0 z-20 rounded-full pointer-events-none opacity-20" style={{ background: 'conic-gradient(from 0deg, transparent, rgba(255,255,255,0.4), transparent, rgba(255,255,255,0.4), transparent)' }}></div>
+                   </motion.div>
+                </div>
+                <div className="w-full text-center px-4 mb-10">
+                  <h1 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white truncate drop-shadow-sm tracking-tight">{currentSong.title || currentSong.name}</h1>
+                  <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 truncate mt-2 tracking-widest">{currentSong.artist || currentSong.author}</h2>
+                </div>
+              </div>
+
+              <div className="w-full mt-auto relative z-20">
+                <div className="w-full flex flex-col gap-1.5 mb-8 px-3">
+                  <input type="range" min="0" max="100" value={progress || 0} onChange={handleSeek} className="w-full h-1.5 rounded-full appearance-none cursor-pointer" style={{ background: `linear-gradient(to right, #4f46e5 ${progress}%, rgba(0, 0, 0, 0.15) 0)` }} />
+                  <div className="flex justify-between text-xs font-bold text-slate-500 dark:text-slate-400 tabular-nums"><span>{formatTime(currentTime)}</span><span>{formatTime(duration)}</span></div>
+                </div>
+                <div className="w-full flex items-center justify-between px-2 lg:px-4">
+                  <button onClick={togglePlayMode} className="p-2 transition-transform hover:scale-110">{getPlayModeIcon()}</button>
+                  <div className="flex items-center gap-4 lg:gap-6">
+                    <button onClick={prevSong} className="p-2 text-slate-700 dark:text-slate-300 hover:text-indigo-500 transition-transform hover:scale-110"><SkipBack size={28} fill="currentColor" /></button>
+                    <button onClick={togglePlay} className="w-16 h-16 lg:w-20 lg:h-20 flex items-center justify-center bg-indigo-500 text-white rounded-full hover:scale-105 shadow-xl shadow-indigo-500/40">{isPlaying ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}</button>
+                    <button onClick={nextSong} className="p-2 text-slate-700 dark:text-slate-300 hover:text-indigo-500 transition-transform hover:scale-110"><SkipForward size={28} fill="currentColor" /></button>
+                  </div>
+                  <div className="flex items-center" onMouseLeave={() => setShowVolumeSlider(false)}>
+                    <AnimatePresence>
+                      {showVolumeSlider && (
+                        <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: 100, opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="overflow-hidden flex items-center mr-2 bg-white/30 dark:bg-black/20 backdrop-blur-md rounded-full px-3 py-1.5 border border-white/20">
+                          <input type="range" min="0" max="1" step="0.01" value={isMuted ? 0 : (volume || 0)} onChange={(e) => setVolume && setVolume(Number(e.target.value))} className="w-20 h-1 appearance-none rounded-full cursor-pointer" style={{ background: `linear-gradient(to right, #4f46e5 ${(volume || 0) * 100}%, rgba(0, 0, 0, 0.15) 0)` }} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <button onClick={() => setShowVolumeSlider(!showVolumeSlider)} onDoubleClick={toggleMute} className={`p-2 rounded-full transition-all ${showVolumeSlider ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-indigo-500'}`}>{isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}</button>
+                  </div>
+                </div>
+              </div>
             </div>
-            {/* 【修改点】：歌曲标题和歌手加上暗色模式字体 */}
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white truncate drop-shadow-sm transition-colors duration-700">{currentSong.title}</h3>
-            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate drop-shadow-sm transition-colors duration-700">{currentSong.artist}</p>
+
+            {/* ================= 右侧：面板 (彻底解决割裂线) ================= */}
+            <div className="md:col-span-7 h-full flex flex-col bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 rounded-[32px] shadow-2xl relative transition-colors duration-700 overflow-hidden">
+              <div className="flex items-center justify-center gap-1 p-1 mt-6 mx-auto bg-white/50 dark:bg-slate-900/50 rounded-full shadow-inner border border-white/40 w-64 z-20 shrink-0">
+                <button onClick={() => setActiveTab('lyrics')} className={`flex-1 py-2 rounded-full font-black text-[13px] transition-all ${activeTab === 'lyrics' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-500'}`}>歌词</button>
+                <button onClick={() => setActiveTab('playlist')} className={`flex-1 py-2 rounded-full font-black text-[13px] transition-all ${activeTab === 'playlist' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-500'}`}>歌单</button>
+              </div>
+
+              <div className="flex-1 relative mt-2 flex flex-col overflow-hidden">
+                {activeTab === 'lyrics' && (
+                  <div className="absolute inset-0 flex flex-col h-full animate-in fade-in duration-300">
+
+                    {/* 🌟 核心修复 1：使用 CSS Mask 替代颜色遮罩，彻底杜绝割裂线 */}
+                    <div
+                      ref={lyricContainerRef}
+                      className="h-full overflow-y-auto no-scrollbar scroll-smooth relative px-6 lyric-mask-container"
+                    >
+                        <div className="py-[35vh] flex flex-col gap-6 text-center lg:px-10">
+                            {parsedLyrics.length > 0 ? (
+                              parsedLyrics.map((line: any, index: number) => {
+                                const isActive = index === activeLyricIndex;
+                                return (
+                                  <div key={index} ref={isActive ? activeLyricRef : null}
+                                    className={`transition-all duration-700 cursor-pointer px-4 rounded-2xl ${isActive ? 'opacity-100 scale-105 py-2 bg-white/10' : 'opacity-20 hover:opacity-40'}`}
+                                    onClick={() => duration > 0 && handleSeek({ target: { value: String((line.time / duration) * 100) } } as any)}
+                                  >
+                                    {/* 🌟 核心修复 2：字体字号缩小，显得更精致 */}
+                                    <p className={`font-black tracking-tight leading-relaxed transition-all duration-700 ${
+                                      isActive 
+                                      ? 'text-lg md:text-xl text-indigo-600 dark:text-indigo-400' 
+                                      : 'text-sm md:text-base text-slate-700 dark:text-slate-300'
+                                    }`}
+                                    style={isActive ? { textShadow: '0 0 15px rgba(99,102,241,0.15)' } : {}}
+                                    >
+                                      {line.text}
+                                    </p>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="h-full flex items-center justify-center"><p className="text-xl font-black text-indigo-500 animate-pulse">{currentLyric || "正在加载..."}</p></div>
+                            )}
+                        </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'playlist' && (
+                  <div className="absolute inset-0 px-8 pb-8 pt-4 animate-in fade-in duration-300 flex flex-col">
+                    <div className="relative w-full max-w-md mx-auto group mb-8 shrink-0">
+                      <div className="absolute inset-0 bg-indigo-500/5 blur-xl group-focus-within:bg-indigo-500/10 transition-all rounded-full" />
+                      <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 z-10 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+                      <input type="text" placeholder="搜索音轨或艺人..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full h-12 pl-12 pr-12 bg-white/30 dark:bg-slate-900/60 backdrop-blur-md border border-white/50 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/40 shadow-inner transition-all"
+                      />
+                      {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 hover:bg-black/10 rounded-full transition-colors"><X size={16} className="text-slate-500" /></button>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 flex flex-col gap-2.5">
+                      <AnimatePresence mode='popLayout'>
+                        {filteredPlaylist.map((song: any) => {
+                          const originalIndex = playlist.findIndex((s: any) => s.id === song.id);
+                          const isPlayingThis = (song.id === currentSong.id);
+                          return (
+                            <motion.div layout initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                              key={song.id} onClick={() => handlePlaySong(originalIndex)}
+                              className={`group flex items-center justify-between p-4 rounded-2xl cursor-pointer transition-all border ${isPlayingThis ? 'bg-white/60 dark:bg-slate-700/80 shadow-md border-indigo-500/30' : 'border-transparent hover:bg-white/30 dark:hover:bg-slate-700/40'}`}
+                            >
+                              <div className="flex items-center gap-4 w-[85%]">
+                                <div className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden shadow-sm">
+                                  <img src={song.cover || song.pic} alt="cover" className="w-full h-full object-cover" />
+                                  {isPlayingThis && isPlaying && <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[1px]"><div className="flex gap-[3px] items-end h-3"><span className="w-0.5 bg-white rounded-full animate-[bounce_1s_infinite_0ms]" /><span className="w-0.5 bg-white rounded-full animate-[bounce_1s_infinite_200ms]" /><span className="w-0.5 bg-white rounded-full animate-[bounce_1s_infinite_400ms]" /></div></div>}
+                                </div>
+                                <div className="flex flex-col truncate">
+                                  <span className={`text-[15px] font-black truncate ${isPlayingThis ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200'}`}>{song.title || song.name}</span>
+                                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">{song.artist || song.author}</span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-bold mb-3 transition-colors duration-700">
-            <span className="w-10 text-right">{formatTime(currentTime)}</span>
-            <input
-              type="range" min="0" max="100" value={progress} onChange={handleSeek}
-              className="flex-1 h-1.5 bg-white/40 dark:bg-slate-700/50 rounded-full appearance-none outline-none cursor-pointer shadow-inner"
-              style={{ background: `linear-gradient(to right, #818cf8 ${progress}%, rgba(255,255,255,0.2) ${progress}%)` }}
-            />
-            <span className="w-10">{formatTime(duration)}</span>
+          {/* 留言板 */}
+          <div className="mt-12 mb-20 bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl rounded-[40px] shadow-2xl border border-white/40 dark:border-white/10 overflow-hidden transition-colors duration-700 relative">
+             <div className="px-8 md:px-16 py-12 relative">
+                <div className="flex items-center gap-3 mb-8 border-b border-slate-300/50 dark:border-slate-700 pb-6">
+                   <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                      <MessageSquare className="text-indigo-500" size={24} />
+                   </div>
+                   <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">乐迷留言板</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">听着这首歌，你想到了什么？</p>
+                   </div>
+                </div>
+                <div className="relative">
+                   <Comments />
+                </div>
+             </div>
           </div>
 
-          <div className="flex items-center justify-center gap-6">
-            <button onClick={prevSong} className="text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors drop-shadow-sm"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-            <button onClick={togglePlay} className="w-12 h-12 bg-indigo-500 text-white rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 hover:scale-110 transition-all border-2 border-white/50 dark:border-slate-600">
-              {isPlaying ? <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> : <svg className="w-5 h-5 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>}
-            </button>
-            <button onClick={nextSong} className="text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors drop-shadow-sm"><svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-          </div>
         </div>
-      </div>
+      </PageTransition>
 
-      {/* 底部独立歌词长条：夜晚可以稍微更黑一点以凸显发光字体 */}
-      <div className="md:col-span-12 order-last mt-4 rounded-3xl bg-slate-900/80 dark:bg-slate-950/90 backdrop-blur-xl border border-white/10 shadow-2xl p-5 flex items-center justify-between transition-all duration-700 hover:shadow-indigo-500/20 group min-h-[80px]">
-        <div className="flex items-end justify-center gap-[4px] h-8 w-16">
-          {isPlaying ? (
-            <>
-              <div className="w-1.5 bg-indigo-400 rounded-t-sm safe-wave" style={{ animationDelay: '0ms' }}></div>
-              <div className="w-1.5 bg-purple-400 rounded-t-sm safe-wave" style={{ animationDelay: '200ms' }}></div>
-              <div className="w-1.5 bg-indigo-500 rounded-t-sm safe-wave" style={{ animationDelay: '400ms' }}></div>
-              <div className="w-1.5 bg-purple-500 rounded-t-sm safe-wave" style={{ animationDelay: '100ms' }}></div>
-              <div className="w-1.5 bg-indigo-300 rounded-t-sm safe-wave" style={{ animationDelay: '300ms' }}></div>
-            </>
-          ) : (
-            <>
-              <div className="w-1.5 h-1 bg-slate-600 rounded-t-sm transition-all duration-300"></div>
-              <div className="w-1.5 h-1 bg-slate-600 rounded-t-sm transition-all duration-300"></div>
-              <div className="w-1.5 h-1 bg-slate-600 rounded-t-sm transition-all duration-300"></div>
-              <div className="w-1.5 h-1 bg-slate-600 rounded-t-sm transition-all duration-300"></div>
-              <div className="w-1.5 h-1 bg-slate-600 rounded-t-sm transition-all duration-300"></div>
-            </>
-          )}
-        </div>
-
-        <div className="flex-1 px-8 flex justify-center items-center overflow-hidden">
-          <p className="text-white text-lg font-bold tracking-widest truncate drop-shadow-[0_0_8px_rgba(99,102,241,0.8)]">
-            {displayedLyric}
-            <span className="inline-block w-[3px] h-5 bg-indigo-400 align-middle ml-1 shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-cursor"></span>
-          </p>
-        </div>
-
-        <div className="w-16 flex justify-end">
-          <svg className={`w-6 h-6 text-indigo-400/50 ${isPlaying ? 'animate-bounce' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-          </svg>
-        </div>
-      </div>
-    </>
+      {/* 🌟 注入关键 CSS：通过 mask-image 实现上下边缘的真正虚化，彻底干掉割裂线 */}
+      <style jsx global>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .lyric-mask-container {
+          -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+        }
+      `}</style>
+    </div>
   );
 }

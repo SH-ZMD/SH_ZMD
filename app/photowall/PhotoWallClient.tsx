@@ -29,7 +29,7 @@ export default function PhotoWallClient() {
 
     const matchedAlbums = albums.filter(album =>
       album.title.toLowerCase().includes(activeQuery) ||
-      album.description.toLowerCase().includes(activeQuery)
+      (album.description || '').toLowerCase().includes(activeQuery)
     );
 
     const matchedPhotos = albums.flatMap(album =>

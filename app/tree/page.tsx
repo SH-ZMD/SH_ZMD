@@ -5,8 +5,14 @@ import matter from 'gray-matter';
 // 引入前台客户端组件
 import CreativeWorkshopClient from './CreativeWorkshopClient';
 
-function getLocalItems(directoryName: string, typeName: string) {
-  const dirPath = path.join(process.cwd(), directoryName);
+const contentDirectories = {
+  posts: path.join(process.cwd(), 'posts'),
+  chatters: path.join(process.cwd(), 'chatters'),
+  moments: path.join(process.cwd(), 'moments'),
+} as const;
+
+function getLocalItems(directoryName: keyof typeof contentDirectories, typeName: string) {
+  const dirPath = contentDirectories[directoryName];
   let items: any[] = [];
   try {
     if (fs.existsSync(dirPath)) {

@@ -4,8 +4,8 @@ import KeyUrlPublicTable from '../../components/KeyUrlPublicTable';
 import { siteConfig } from '../../siteConfig';
 
 export const metadata = {
-  title: `资源表 | ${siteConfig.title}`,
-  description: 'API Key、URL 与推广链接资源展示表',
+  title: `中转站 | ${siteConfig.title}`,
+  description: '中转站、镜像站和资源入口推荐表。',
 };
 
 export default function KeyUrlsPage() {

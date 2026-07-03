@@ -1,8 +1,11 @@
-import fs from 'fs';
+﻿import fs from 'fs';
 import path from 'path';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { siteConfig } from '../../siteConfig';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type RecommendType = 'course' | 'software' | 'skill' | 'tool' | 'site' | 'book' | 'other';
 type RecommendationItem = {
@@ -26,7 +29,7 @@ type RecommendationGroup = {
 const typeLabels: Record<RecommendType, string> = {
   course: '课程',
   software: '软件',
-  skill: 'Skill',
+  skill: '技能',
   tool: '工具',
   site: '网站',
   book: '书籍',
@@ -35,7 +38,7 @@ const typeLabels: Record<RecommendType, string> = {
 
 export const metadata = {
   title: `推荐表 | ${siteConfig.title}`,
-  description: '推荐课程、软件、Skill 和工具清单',
+  description: '推荐课程、软件、技能、工具和网站清单。',
 };
 
 function readRecommendationGroups(): RecommendationGroup[] {
@@ -46,6 +49,10 @@ function readRecommendationGroups(): RecommendationGroup[] {
   } catch {
     return [];
   }
+}
+
+function ratingStars(rating: number) {
+  return '★'.repeat(Math.max(1, Math.min(5, rating || 5)));
 }
 
 export default function RecommendationsPage() {
@@ -60,7 +67,7 @@ export default function RecommendationsPage() {
             <div className="p-6 md:p-10 border-b border-white/50 dark:border-white/10">
               <div className="inline-flex rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 px-4 py-2 text-xs font-black text-fuchsia-600 dark:text-fuchsia-300">Recommendations</div>
               <h1 className="mt-4 text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">推荐表</h1>
-              <p className="mt-3 text-sm md:text-base text-slate-600 dark:text-slate-300">这里放我觉得值得推荐的课程、软件、Skill、工具和网站。</p>
+              <p className="mt-3 text-sm md:text-base text-slate-600 dark:text-slate-300">这里放我觉得值得推荐的课程、软件、技能、工具、网站和资源。</p>
             </div>
 
             <div className="p-5 md:p-8 grid gap-8">
@@ -86,7 +93,7 @@ export default function RecommendationsPage() {
                         {item.description && <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-600 dark:text-slate-300">{item.description}</p>}
                         {item.note && <p className="mt-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 px-3 py-2 text-xs leading-6 text-slate-500 dark:text-slate-400">{item.note}</p>}
                         <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
-                          <span className="rounded-full bg-amber-500/10 px-3 py-1.5 text-amber-600 dark:text-amber-300">{'★'.repeat(Math.max(1, Math.min(5, item.rating || 5)))}</span>
+                          <span className="rounded-full bg-amber-500/10 px-3 py-1.5 text-amber-600 dark:text-amber-300">{ratingStars(item.rating)}</span>
                           {(item.tags || []).map((tag) => <span key={tag} className="rounded-full bg-indigo-500/10 px-3 py-1.5 text-indigo-600 dark:text-indigo-300">#{tag}</span>)}
                         </div>
                         {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="mt-5 inline-flex h-10 items-center justify-center rounded-2xl bg-slate-900 px-4 text-sm font-black text-white transition hover:-translate-y-0.5 dark:bg-white dark:text-slate-900">打开链接</a>}

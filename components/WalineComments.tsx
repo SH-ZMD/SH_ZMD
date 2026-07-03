@@ -16,7 +16,7 @@ export default function WalineComments({ id, path }: WalineCommentsProps) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    walineInstance.current = init({
+    const walineOptions = {
       el: containerRef.current,
       serverURL: process.env.NEXT_PUBLIC_WALINE_SERVER_URL || '',
       path: path,
@@ -30,7 +30,9 @@ export default function WalineComments({ id, path }: WalineCommentsProps) {
       requiredMeta: ['nick'],
       pageSize: 10,
       dark: 'auto',
-    });
+    } as Parameters<typeof init>[0] & { avatar: string };
+
+    walineInstance.current = init(walineOptions);
 
     return () => {
       walineInstance.current?.destroy();

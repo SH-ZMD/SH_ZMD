@@ -174,11 +174,26 @@
           "note": "专项课",
           "createdAt": 1782908528951,
           "updatedAt": 1782908642132
+        },
+        {
+          "id": "rec_1782919186705",
+          "title": "Codex第四节——熟悉与复习",
+          "description": "这一节会深入讲解关于Codex的各项操作和各类功能小技巧（如排队插队批注），对于使用codex是锦上添花",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/YtfywRI0JiOjLXkNQ2xcSfsFnhf",
+          "imageUrl": "/image/pasted-1782919266591-ea9a39.webp",
+          "type": "course",
+          "tags": [
+            "熟悉"
+          ],
+          "rating": 5,
+          "note": "复习课",
+          "createdAt": 1782919186705,
+          "updatedAt": 1782919272704
         }
       ],
       "createdAt": 1782902797805,
       "updatedAt": 1782902861695
     }
   ],
-  "updatedAt": 1782914667986
+  "updatedAt": 1782919277736
 }

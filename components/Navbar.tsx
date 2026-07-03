@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
@@ -12,7 +12,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // --- 🌟 物理引擎：菜单转动逻辑 ---
+  // --- 物理引擎：菜单转动逻辑 ---
   const wheelRef = useRef<HTMLDivElement>(null);
   const rawRotation = useMotionValue(0);
   const smoothRotation = useSpring(rawRotation, { stiffness: 200, damping: 25 });
@@ -35,7 +35,7 @@ export default function Navbar() {
     rawRotation.set(rawRotation.get() + deltaAngle);
   };
 
-  // --- 🌟 物理引擎：手机端按钮拖拽逻辑 ---
+  // --- 物理引擎：手机端按钮拖拽逻辑 ---
   const dragY = useMotionValue(0);
   const [constraints, setConstraints] = useState({ top: 0, bottom: 0 });
 
@@ -81,7 +81,8 @@ export default function Navbar() {
     { name: '说说', href: '/moments' },
     { name: '留言墙', href: '/guestbook' },
     { name: '杂谈', href: '/chatter' },
-    { name: '分享表', href: '/share' },
+    { name: '推荐表', href: '/recommendations' },
+    { name: '中转站', href: '/key-urls' },
     { name: '友链', href: '/friends' },
     { name: '关于', href: '/about' },
   ];
@@ -94,12 +95,12 @@ export default function Navbar() {
 
   const navLinks = [...primaryNavLinks, ...moreNavLinks];
 
-  // 🌟 核心：过滤掉“灵境”，专供手机端使用，保证圆盘自动重新均匀排布
+  // 过滤掉“灵境”，专供手机端使用，保证圆盘自动重新均匀排布
   const mobileNavLinks = navLinks.filter(link => link.href !== '/tree');
 
   return (
     <>
-      {/* PC端导航栏 */}
+      {/* PC 端导航栏 */}
       <header className={`hidden md:block w-full fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${showNav ? 'translate-y-0' : '-translate-y-full'} bg-white/50 dark:bg-slate-950/55 backdrop-blur-2xl border-white/30 dark:border-white/10 shadow-lg shadow-slate-900/5`}>
         <div className="w-[94%] max-w-7xl mx-auto h-16 flex items-center justify-between gap-4 px-4 box-border">
           <Link href="/" className="group flex items-center gap-3 shrink-0 rounded-2xl px-3 py-2 transition-all hover:bg-white/45 dark:hover:bg-white/5">
@@ -140,7 +141,7 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* 📱 手机端：可拖拽吸附的触发球 */}
+      {/* 手机端：可拖拽吸附的触发球 */}
       <div className="md:hidden">
         <motion.button
           drag="y"
@@ -162,7 +163,7 @@ export default function Navbar() {
           </div>
         </motion.button>
 
-        {/* 2. 居中展开的巨型全圆转轴 */}
+        {/* 居中展开的全圆转轴 */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <>
@@ -189,14 +190,14 @@ export default function Navbar() {
                 >
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-700 border-4 border-slate-300 dark:border-slate-500 flex items-center justify-center shadow-inner z-10">
                     <button onClick={() => setIsMobileMenuOpen(false)} className="w-12 h-12 rounded-full bg-indigo-500 flex items-center justify-center text-white font-black shadow-lg hover:bg-red-500 hover:rotate-90 transition-all duration-300 active:scale-95">
-                      ✕
+                      ×
                     </button>
                   </div>
 
-                  {/* 🌟 手机端轮盘渲染：使用过滤后的 mobileNavLinks */}
+                  {/* 手机端轮盘渲染：使用过滤后的 mobileNavLinks */}
                   {mobileNavLinks.map((link, index) => {
                     const isActive = pathname === link.href || pathname === `${link.href}/`;
-                    // 🌟 角度计算也会基于过滤后的长度，保证图标自动均匀排布！
+                    // 角度基于过滤后的长度，保证图标自动均匀排布。
                     const angle = index * (360 / mobileNavLinks.length);
 
                     return (
@@ -232,3 +233,4 @@ export default function Navbar() {
     </>
   );
 }
+

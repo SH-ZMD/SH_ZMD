@@ -39,7 +39,7 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const renderStarsRef = useRef<RenderStar[]>([]);
-  const mouseRef = useRef({ x: -999, y: -999, isDown: false, dragStartX: 0, dragStartY: 0 });
+  const mouseRef = useRef({ x: -999, y: -999, isDown: false, dragStartX: 0, dragStartY: 0, clickStartX: 0, clickStartY: 0 });
   const offsetRef = useRef({ x: 0, y: 0 });
   const animFrameRef = useRef<number>(0);
   const [hoveredStar, setHoveredStar] = useState<RenderStar | null>(null);

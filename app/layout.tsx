@@ -10,10 +10,13 @@ import LazyClickEffect from "../components/LazyClickEffect";
 import BackgroundSlider from "../components/BackgroundSlider";
 import GlobalToolbox from "../components/GlobalToolbox";
 import SplashScreen from "../components/SplashScreen";
-// import LazyCyberCat from '../components/LazyCyberCat'; // 暂时停用煤球
 import LazyDanmakuBackground from '../components/LazyDanmakuBackground';
+import IdleMount from '../components/IdleMount';
 
 import MobileBackButton from '../components/MobileBackButton';
+import { OperationProvider } from '../context/OperationContext';
+import { ToastProvider } from '../components/ToastProvider';
+import CommentNotifier from '../components/CommentNotifier';
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -53,6 +56,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
       <body className="w-screen overflow-x-hidden min-h-full flex flex-col relative transition-colors duration-1000 bg-slate-50 dark:bg-slate-950 font-serif">
         <ThemeProvider>
+          <ToastProvider>
+            <OperationProvider>
 
           <SplashScreen />
 
@@ -77,25 +82,39 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
                 {/* 隐藏手机端高负载粒子特效 */}
                 <div className="hidden md:block absolute inset-0 w-full h-full">
-                  <LazyBackgroundEffects />
+                  <IdleMount delay={1800}>
+                    <LazyBackgroundEffects />
+                  </IdleMount>
                 </div>
               </div>
 
               {/* 隐藏手机端弹幕 */}
               <div className="hidden md:block">
-                <LazyDanmakuBackground />
+                <IdleMount delay={2600}>
+                  <LazyDanmakuBackground />
+                </IdleMount>
               </div>
 
               <div className="relative z-10 flex-1 flex flex-col">
                 {children}
               </div>
 
-              <div className="hidden md:block">
-                <FloatingPlayer />
+              <div className="fixed right-4 top-20 z-[80] hidden md:block">
+                <IdleMount delay={3500}>
+                  <CommentNotifier />
+                </IdleMount>
               </div>
 
               <div className="hidden md:block">
-                <GlobalToolbox />
+                <IdleMount delay={2200}>
+                  <FloatingPlayer />
+                </IdleMount>
+              </div>
+
+              <div className="hidden md:block">
+                <IdleMount delay={3000}>
+                  <GlobalToolbox />
+                </IdleMount>
               </div>
 
               <div className="md:hidden block">
@@ -104,7 +123,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
               {/* 隐藏手机端点击粒子 */}
               <div className="hidden md:block">
-                <LazyClickEffect />
+                <IdleMount delay={3200}>
+                  <LazyClickEffect />
+                </IdleMount>
               </div>
             </div>
 
@@ -117,12 +138,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             `}} />
           </MusicProvider>
 
-          {/* 煤球悬浮猫暂时停用
-          <div className="hidden md:block">
+          {/* 本地管理客户端禁用煤球悬浮猫，避免遮挡设置/表格操作。 */}
+          {/* <div className="hidden md:block">
             <LazyCyberCat />
-          </div>
-          */}
+          </div> */}
 
+            </OperationProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

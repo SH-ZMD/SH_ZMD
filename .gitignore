@@ -29,6 +29,18 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+backend.dev*.log
+frontend.dev*.log
+
+# python cache / local runtime
+__pycache__/
+*.pyc
+*.pyo
+
+# temporary backups
+*.bak
+*.tmp
 
 # env files (can opt-in for committing if needed)
 .env*

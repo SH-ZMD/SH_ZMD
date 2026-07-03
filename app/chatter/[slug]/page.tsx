@@ -120,7 +120,7 @@ function getRecentChatters(currentSlug: string) {
     const { data } = matter(c);
     if (data.hidden === true) return null;
     return { slug: s, title: data.title || '碎片记录', date: data.date || '1970-01-01' };
-  }).filter((p): p is any => Boolean(p) && p.slug !== currentSlug)
+  }).filter((p): p is { slug: string; title: string; date: string } => p !== null && p.slug !== currentSlug)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 3);
 }
