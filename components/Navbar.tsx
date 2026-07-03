@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform, PanInfo } from 'framer-motion';
 import { siteConfig } from '../siteConfig';
+import PendingOperationsInbox from './PendingOperationsInbox';
 
 export default function Navbar() {
   const [showNav, setShowNav] = useState(true);
@@ -88,6 +89,8 @@ export default function Navbar() {
   ];
 
   const moreNavLinks = [
+    { name: '设置', href: '/settings' },
+    { name: '草稿箱', href: '/drafts' },
     { name: '星图', href: '/starmap' },
     { name: '计划表', href: '/plans' },
     { name: '灵境', href: '/tree' },
@@ -138,6 +141,7 @@ export default function Navbar() {
               </div>
             </div>
           </nav>
+          <PendingOperationsInbox />
         </div>
       </header>
 

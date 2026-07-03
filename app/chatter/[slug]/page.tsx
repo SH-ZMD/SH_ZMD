@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
 
 // 🌟 核心升级：引入 Next.js 现代统一解析流
 import { unified } from 'unified';
@@ -30,12 +29,7 @@ export async function generateStaticParams() {
   if (!fs.existsSync(chattersDirectory)) return [];
   const filenames = fs.readdirSync(chattersDirectory);
   return filenames
-    .filter((name) => {
-      if (!name.endsWith('.md')) return false;
-      const content = fs.readFileSync(path.join(chattersDirectory, name), 'utf8');
-      const { data } = matter(content);
-      return data.hidden !== true;
-    })
+    .filter((name) => name.endsWith('.md'))
     .map((name) => ({
       slug: name.replace(/\.md$/, ''),
     }));
@@ -46,10 +40,9 @@ async function getChatterData(slug: string) {
   const fileContents = fs.readFileSync(fullPath, 'utf8');
 
   let { data, content } = matter(fileContents);
-  if (data.hidden === true) notFound();
 
   // ==========================================
-  // 🌟 前台渲染清洗区：终极防吞换行 + 安全保护补丁！（从 Post 完美移植）
+  // 🌟 前台渲染清洗区：终极防吞换行 + 安全保护补丁！
   // ==========================================
 
   // 1. 基础物理清洗：统一换行符，干掉幽灵占位符和纯空格废行
@@ -118,9 +111,8 @@ function getRecentChatters(currentSlug: string) {
     const s = f.replace(/\.md$/, '');
     const c = fs.readFileSync(path.join(chattersDirectory, f), 'utf8');
     const { data } = matter(c);
-    if (data.hidden === true) return null;
     return { slug: s, title: data.title || '碎片记录', date: data.date || '1970-01-01' };
-  }).filter((p): p is { slug: string; title: string; date: string } => p !== null && p.slug !== currentSlug)
+  }).filter(p => p.slug !== currentSlug)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 3);
 }
@@ -170,7 +162,14 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                   {chatterData.title}
                 </h1>
 
-                {/* ✅ 前端展示版：特权修改按钮已彻底移除！ */}
+                {/* ✅ 控制台专供：修改此篇按钮保留 */}
+                <Link
+                  href={`/editor?id=${chatterData.slug}&type=chatter`}
+                  className="absolute top-0 right-0 p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white transition-all shadow-sm border border-slate-200 dark:border-slate-700 group flex items-center gap-2 active:scale-95 z-50"
+                >
+                  <span className="text-base md:text-lg">✏️</span>
+                  <span className="text-xs md:text-sm font-bold hidden md:inline-block group-hover:inline-block">修改此篇</span>
+                </Link>
 
                 <div className="flex flex-wrap items-center gap-2 md:gap-3">
                   <div className="flex items-center gap-1.5 md:gap-2 text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-500/5 dark:bg-indigo-400/10 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl text-xs md:text-sm border border-indigo-500/10">
@@ -211,7 +210,8 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                   .prose ul ul, .prose ol ul { list-style-type: circle !important; margin-top: 0.25rem !important; margin-bottom: 0.25rem !important; }
                   .prose ol ol, .prose ul ol { list-style-type: lower-alpha !important; margin-top: 0.25rem !important; margin-bottom: 0.25rem !important; }
                   
-                  .prose del { text-decoration-color: inherit !important; opacity: 0.6; }
+                  /* 🌟 删除线强制展现 */
+                  .prose s, .prose del { text-decoration-line: line-through !important; opacity: 0.6; }
 
                   /* 🌟 引用块专属果冻极客风样式补丁 */
                   .prose blockquote {
@@ -222,28 +222,40 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                     border-radius: 0 1.25rem 1.25rem 0 !important;
                     font-style: italic !important;
                     color: #64748b !important;
+                    quotes: none !important; /* 强制移除 Tailwind 原生的丑陋大引号 */
                   }
                   .prose blockquote p {
                     margin: 0 !important; 
                     color: inherit !important;
                   }
+                  /* 🌟 彻底杀掉 Tailwind Typography 生成的前后伪元素引号！ */
+                  .prose blockquote p::before,
+                  .prose blockquote p::after {
+                    display: none !important;
+                    content: none !important;
+                  }
+                  
                   .dark .prose blockquote {
                     border-left-color: #818cf8 !important;
                     background-color: rgba(129, 140, 248, 0.1) !important;
                     color: #94a3b8 !important;
                   }
                   
+                  /* 🌟 果冻极客风代码字体 */
                   .prose pre {
                     background-color: #282c34 !important; color: #abb2bf !important;
-                    padding: 1rem !important; border-radius: 0.75rem !important;
+                    padding: 1rem !important; border-radius: 1.25rem !important;
                     overflow-x: auto !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.3) !important;
                     margin-top: 1rem !important; margin-bottom: 1rem !important;
                   }
                   
                   .prose pre code, .prose p code, .prose li code { 
-                    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, ui-monospace, monospace !important; 
-                    font-variant-ligatures: contextual !important; 
+                    font-family: ui-rounded, 'Quicksand', 'Nunito', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace !important;
+                    font-variant-ligatures: contextual !important;
+                    font-weight: 500 !important;
+                    letter-spacing: 0.02em !important;
                   }
+                  
                   .prose pre code { 
                     background-color: transparent !important; 
                     padding: 0 !important; 
@@ -252,10 +264,19 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                   }
                   
                   .prose code::before, .prose code::after { content: none !important; }
-                  .prose p code, .prose li code { background-color: rgba(99, 102, 241, 0.1) !important; color: #6366f1 !important; padding: 0.1rem 0.3rem !important; border-radius: 0.25rem !important; font-weight: 600 !important; font-size: 0.85em !important; }
+                  
+                  .prose p code, .prose li code { 
+                    background-color: rgba(99, 102, 241, 0.1) !important; color: #6366f1 !important; 
+                    padding: 0.2rem 0.4rem !important; border-radius: 0.5rem !important; font-size: 0.85em !important; 
+                  }
                   .dark .prose p code, .dark .prose li code { background-color: rgba(99, 102, 241, 0.2) !important; color: #818cf8 !important; }
+                  
+                  /* 🌟 确保前台生成的 <br> 占据真实的垂直空间 */
+                  .prose br { display: block !important; content: "" !important; margin-top: 0.5em !important; }
+
                   .prose img { display: block !important; margin: 1.5rem auto !important; border-radius: 1rem !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important; max-width: 100% !important; height: auto !important; }
 
+                  /* 🌟 Atom One Dark 顶级补丁 */
                   .prose pre code .hljs-comment, .prose pre code .hljs-quote { color: #5c6370 !important; font-style: italic !important; }
                   .prose pre code .hljs-doctag, .prose pre code .hljs-keyword, .prose pre code .hljs-formula { color: #c678dd !important; }
                   .prose pre code .hljs-keyword.type_, .prose pre code .hljs-type { color: #c678dd !important; } 
@@ -274,7 +295,7 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                     
                     .prose ul, .prose ol { padding-left: 2rem !important; font-size: 1.1rem !important; }
                     
-                    .prose pre { padding: 1.25rem !important; margin-top: 1.5rem !important; margin-bottom: 1.5rem !important; }
+                    .prose pre { padding: 1.25rem !important; margin-top: 1.5rem !important; margin-bottom: 1.5rem !important; border-radius: 1.5rem !important; }
                     .prose pre code { font-size: 0.9em !important; }
                     .prose p code, .prose li code { padding: 0.2rem 0.4rem !important; font-size: 0.9em !important; border-radius: 0.375rem !important;}
                     .prose img { margin: 2rem auto !important; border-radius: 2rem !important; box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important; }

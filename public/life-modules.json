@@ -193,7 +193,55 @@
       ],
       "createdAt": 1782902797805,
       "updatedAt": 1782902861695
+    },
+    {
+      "id": "group_1783098284110",
+      "name": "AI入门",
+      "description": "这个栏目主要讲解AI相关的基础知识，并不上升到使用，而是讲解AI领域相关的重要词汇，重要概念等等",
+      "items": [
+        {
+          "id": "rec_1783098284110",
+          "title": "AI入门第一课——提示词基础课",
+          "description": "大概了解AI的一些概念，明白调试时都代表什么以便优化自身提示词工程",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/QzLawPPUViBFlJki4f0cSiBfnod",
+          "imageUrl": "/image/pasted-1783098733730-250b9d.webp",
+          "type": "course",
+          "tags": [],
+          "rating": 5,
+          "note": "提示词工程",
+          "createdAt": 1783098284110,
+          "updatedAt": 1783098733773
+        },
+        {
+          "id": "rec_1783100804127",
+          "title": "AI补充课——提示词深入课",
+          "description": "这里可以理解到提示词在不同情境下应该怎么设计",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/LdVkwctdvi7HIbkqG0CcuXuwnsb",
+          "imageUrl": "",
+          "type": "course",
+          "tags": [],
+          "rating": 5,
+          "note": "提示词工程",
+          "createdAt": 1783100804127,
+          "updatedAt": 1783100851766
+        },
+        {
+          "id": "rec_1783100852544",
+          "title": "AI成熟课——提示词实战课",
+          "description": "学会了提示词的概念和提示词在特定场景大概怎么做，这里有一些提示词工程的公式可供学习",
+          "url": "https://tauacgr5lqv.feishu.cn/wiki/JuHew269GiqSyDkiL4Lcj72Znrb",
+          "imageUrl": "",
+          "type": "course",
+          "tags": [],
+          "rating": 5,
+          "note": "提示词工程",
+          "createdAt": 1783100852544,
+          "updatedAt": 1783100910952
+        }
+      ],
+      "createdAt": 1783098284110,
+      "updatedAt": 1783098324991
     }
   ],
-  "updatedAt": 1782919277736
+  "updatedAt": 1783100912677
 }
