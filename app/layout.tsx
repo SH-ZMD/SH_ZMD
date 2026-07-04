@@ -16,7 +16,6 @@ import IdleMount from '../components/IdleMount';
 import MobileBackButton from '../components/MobileBackButton';
 import { OperationProvider } from '../context/OperationContext';
 import { ToastProvider } from '../components/ToastProvider';
-import CommentNotifier from '../components/CommentNotifier';
 
 export const metadata: Metadata = {
   title: siteConfig.title,
@@ -97,12 +96,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
               <div className="relative z-10 flex-1 flex flex-col">
                 {children}
-              </div>
-
-              <div className="fixed right-4 top-20 z-[80] hidden md:block">
-                <IdleMount delay={3500}>
-                  <CommentNotifier />
-                </IdleMount>
               </div>
 
               <div className="hidden md:block">
