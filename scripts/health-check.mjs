@@ -60,6 +60,34 @@ const interfaceChecks = [
   },
 ];
 
+const dependencyScanRoots = ['app', 'components', 'context', 'data', 'scripts'];
+const dependencyScanExtensions = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
+const nodeBuiltins = new Set([
+  'assert',
+  'buffer',
+  'child_process',
+  'crypto',
+  'events',
+  'fs',
+  'http',
+  'https',
+  'module',
+  'net',
+  'os',
+  'path',
+  'process',
+  'querystring',
+  'stream',
+  'string_decoder',
+  'timers',
+  'tls',
+  'tty',
+  'url',
+  'util',
+  'vm',
+  'zlib',
+]);
+
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8');
 }
@@ -90,6 +118,53 @@ function compareSignatures(name, expected, actual) {
     if (missing.length) failures.push(`${name} is missing recommendation items: ${missing.slice(0, 5).join('; ')}`);
     if (extra.length) failures.push(`${name} has unexpected recommendation items: ${extra.slice(0, 5).join('; ')}`);
   }
+}
+
+function walkFiles(relativeDir, result = []) {
+  const fullDir = path.join(root, relativeDir);
+  if (!fs.existsSync(fullDir)) return result;
+  for (const entry of fs.readdirSync(fullDir, { withFileTypes: true })) {
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      if (['node_modules', '.next', '.git'].includes(entry.name)) continue;
+      walkFiles(relativePath, result);
+      continue;
+    }
+    if (dependencyScanExtensions.has(path.extname(entry.name))) {
+      result.push(relativePath.replaceAll(path.sep, '/'));
+    }
+  }
+  return result;
+}
+
+function packageNameFromSpecifier(specifier) {
+  if (!specifier || specifier.startsWith('.') || specifier.startsWith('/') || specifier.startsWith('@/')) return null;
+  if (specifier.startsWith('node:')) return null;
+  const first = specifier.split('/')[0];
+  if (nodeBuiltins.has(first)) return null;
+  if (specifier.startsWith('@')) {
+    const parts = specifier.split('/');
+    return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : specifier;
+  }
+  return first;
+}
+
+function collectDependencyImports(text) {
+  const imports = new Set();
+  const patterns = [
+    /\bimport\s+(?:type\s+)?(?:[^'"]+?\s+from\s+)?['"]([^'"]+)['"]/g,
+    /\bexport\s+(?:type\s+)?[^'"]+?\s+from\s+['"]([^'"]+)['"]/g,
+    /\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
+  ];
+  for (const pattern of patterns) {
+    let match;
+    while ((match = pattern.exec(text))) {
+      const packageName = packageNameFromSpecifier(match[1]);
+      if (packageName) imports.add(packageName);
+    }
+  }
+  return imports;
 }
 
 for (const file of publicJsonFiles) {
@@ -136,6 +211,36 @@ for (const check of interfaceChecks) {
   if (missing.length) failures.push(`${check.file} is missing interface markers: ${missing.join(', ')}`);
   if (stale.length) failures.push(`${check.file} still contains stale markers: ${stale.join(', ')}`);
   if (!missing.length && !stale.length) console.log(`INTERFACE OK: ${check.file}`);
+}
+
+try {
+  const packageJson = JSON.parse(read('package.json'));
+  const declaredDependencies = new Set([
+    ...Object.keys(packageJson.dependencies || {}),
+    ...Object.keys(packageJson.devDependencies || {}),
+    ...Object.keys(packageJson.optionalDependencies || {}),
+    ...Object.keys(packageJson.peerDependencies || {}),
+  ]);
+  const missingImports = new Map();
+  for (const scanRoot of dependencyScanRoots) {
+    for (const file of walkFiles(scanRoot)) {
+      const imports = collectDependencyImports(read(file));
+      for (const packageName of imports) {
+        if (declaredDependencies.has(packageName)) continue;
+        if (!missingImports.has(packageName)) missingImports.set(packageName, []);
+        missingImports.get(packageName).push(file);
+      }
+    }
+  }
+  if (missingImports.size) {
+    for (const [packageName, files] of missingImports) {
+      failures.push(`Package "${packageName}" is imported but missing from package.json: ${files.slice(0, 5).join(', ')}`);
+    }
+  } else {
+    console.log('DEPENDENCY OK: imported packages are declared in package.json');
+  }
+} catch (error) {
+  failures.push(`Dependency scan failed: ${error instanceof Error ? error.message : String(error)}`);
 }
 
 if (failures.length) {
