@@ -11,6 +11,12 @@ type CommentItem = {
   parentId?: string | null;
 };
 
+type CommentsProps = {
+  pageId?: string;
+  compact?: boolean;
+  className?: string;
+};
+
 const PRODUCTION_COMMENT_API = 'https://sh-zmd.vercel.app/api/comments';
 const MAX_COMMENT_IMAGE_SIZE = 10 * 1024 * 1024;
 const COMMENT_COOLDOWN_MS = 15 * 1000;
@@ -28,30 +34,8 @@ async function readJsonSafely(res: Response) {
 async function fetchProductionComments(pageId: string) {
   const remoteRes = await fetch(`${PRODUCTION_COMMENT_API}?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
   const remoteData = await readJsonSafely(remoteRes);
-  if (remoteRes.ok && Array.isArray(remoteData.comments)) {
-    return remoteData.comments;
-  }
+  if (remoteRes.ok && Array.isArray(remoteData.comments)) return remoteData.comments;
   return [];
-}
-
-async function uploadLocalCommentImage(file: File) {
-  if (file.size > MAX_COMMENT_IMAGE_SIZE) {
-    throw new Error('图片不能超过 10MB，请压缩后再上传。');
-  }
-  const configRes = await fetch(`/backend_config.json?t=${Date.now()}`);
-  const configData = await configRes.json();
-  const formData = new FormData();
-  formData.append('file', file);
-
-  const res = await fetch(`http://127.0.0.1:${configData.api_port}/api/picbed/local-upload`, {
-    method: 'POST',
-    body: formData,
-  });
-  const data = await readJsonSafely(res);
-  if (!res.ok || !data.success || !data.url) {
-    throw new Error(data.message || '图片导入失败');
-  }
-  return data.url as string;
 }
 
 async function uploadCommentImage(file: File) {
@@ -60,10 +44,7 @@ async function uploadCommentImage(file: File) {
   }
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch('/api/comment-images', {
-    method: 'POST',
-    body: formData,
-  });
+  const res = await fetch('/api/comment-images', { method: 'POST', body: formData });
   const data = await readJsonSafely(res);
   if (!res.ok || !data.url) throw new Error(data.error || '图片上传失败');
   return data.url as string;
@@ -73,7 +54,6 @@ function withImages(content: string, imageUrls: string[]) {
   const cleanContent = content.trim();
   const cleanUrls = imageUrls.map((url) => url.trim()).filter(Boolean);
   if (cleanUrls.length === 0) return cleanContent;
-
   const images = cleanUrls.map((url) => `![留言图片](${url})`).join('\n\n');
   return `${cleanContent}${cleanContent ? '\n\n' : ''}${images}`;
 }
@@ -92,17 +72,35 @@ function renderCommentContent(content: string) {
         />
       );
     }
-    return part ? (
-      <span key={index} className="whitespace-pre-wrap">
-        {part}
-      </span>
-    ) : null;
+    if (!part) return null;
+
+    return part.split('\n').map((line, lineIndex) => {
+      const quoteMatch = line.match(/^\s*[>＞]\s?(.*)$/);
+      if (quoteMatch) {
+        return (
+          <span
+            key={`${index}-${lineIndex}`}
+            className="my-2 block border-l-4 border-indigo-400/70 bg-indigo-500/10 px-3 py-2 text-slate-600 dark:text-slate-300"
+          >
+            {quoteMatch[1] || ' '}
+          </span>
+        );
+      }
+
+      return (
+        <span key={`${index}-${lineIndex}`} className="whitespace-pre-wrap">
+          {line}
+          {lineIndex < part.split('\n').length - 1 ? '\n' : ''}
+        </span>
+      );
+    });
   });
 }
 
-export default function Comments() {
+export default function Comments({ pageId: explicitPageId, compact = false, className = '' }: CommentsProps = {}) {
   const pathname = usePathname();
-  const pageId = useMemo(() => pathname.replace(/\/$/, '') || '/', [pathname]);
+  const routePageId = useMemo(() => pathname.replace(/\/$/, '') || '/', [pathname]);
+  const pageId = useMemo(() => (explicitPageId || routePageId).replace(/\/$/, '') || '/', [explicitPageId, routePageId]);
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [author, setAuthor] = useState('');
   const [content, setContent] = useState('');
@@ -133,13 +131,12 @@ export default function Comments() {
       const res = await fetch(`/api/comments?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
       const data = await readJsonSafely(res);
       if (!res.ok) throw new Error(data.error || '留言读取失败');
-      if (Array.isArray(data.comments) && data.comments.length > 0) {
+      if (Array.isArray(data.comments)) {
         setComments(data.comments);
         return;
       }
-
       setComments(await fetchProductionComments(pageId));
-    } catch (error: any) {
+    } catch {
       try {
         setComments(await fetchProductionComments(pageId));
       } catch {
@@ -172,54 +169,35 @@ export default function Comments() {
     setSubmitting(true);
     setMessage('');
     try {
+      const payload = { pageId, author: cleanAuthor, content: cleanContent, parentId };
       const res = await fetch('/api/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent, parentId }),
+        body: JSON.stringify(payload),
       });
-      const data = await readJsonSafely(res);
-      let finalData = data;
+      let data = await readJsonSafely(res);
       if (!res.ok) {
         if (res.status === 429) {
-          setMessage(data.error || '发消息太快啦，请等待 15s 后再发送。');
-          return;
+          throw new Error(data.error || '发消息太快啦，请等待 15s 后再发送。');
         }
         const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent, parentId }),
+          body: JSON.stringify(payload),
         });
-        finalData = await readJsonSafely(remoteRes);
-        if (!remoteRes.ok) throw new Error(finalData.error || data.error || '发送失败');
+        data = await readJsonSafely(remoteRes);
+        if (!remoteRes.ok) throw new Error(data.error || '发送失败');
       }
       setContent('');
       setImageUrls([]);
       setReplyContent('');
       setReplyTarget(null);
       setAuthor('');
-      setComments((prev) => [finalData.comment, ...prev].filter(Boolean));
+      setComments((prev) => [data.comment, ...prev].filter(Boolean));
       setLastSubmitAt(Date.now());
       setMessage('留言已送达。');
     } catch (error: any) {
-      try {
-        const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pageId, author: cleanAuthor, content: cleanContent, parentId }),
-        });
-        const remoteData = await readJsonSafely(remoteRes);
-        if (!remoteRes.ok) throw new Error(remoteData.error || '发送失败');
-        setContent('');
-        setImageUrls([]);
-        setReplyContent('');
-        setReplyTarget(null);
-        setAuthor('');
-        setComments((prev) => [remoteData.comment, ...prev].filter(Boolean));
-        setLastSubmitAt(Date.now());
-      setMessage('留言已送达。');
-      } catch {
-        setMessage('发送失败');
-      }
+      setMessage(error.message || '发送失败');
     } finally {
       setSubmitting(false);
     }
@@ -228,7 +206,6 @@ export default function Comments() {
   const handlePasteImage = async (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const imageItem = Array.from(event.clipboardData?.items || []).find((item) => item.type.startsWith('image/'));
     if (!imageItem) return;
-
     const file = imageItem.getAsFile();
     if (!file) return;
     if (file.size > MAX_COMMENT_IMAGE_SIZE) {
@@ -274,8 +251,8 @@ export default function Comments() {
   };
 
   return (
-    <div className="w-full mt-12 relative">
-      <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full pointer-events-none z-0"></div>
+    <div className={`w-full ${compact ? 'mt-4' : 'mt-12'} relative ${className}`}>
+      <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full pointer-events-none z-0" />
 
       <div className="relative z-10 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
         <div className="grid grid-cols-1 gap-4">
@@ -310,6 +287,7 @@ export default function Comments() {
               </label>
               {imageUrls.length > 0 && (
                 <button
+                  type="button"
                   onClick={() => setImageUrls([])}
                   className="rounded-2xl border border-white/40 px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
                 >
@@ -342,9 +320,10 @@ export default function Comments() {
           </div>
           <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              {message || '支持 Markdown；可粘贴图片，留言会先保存到站点留言箱。'}
+              {message || '支持 Markdown；可粘贴图片，留言会保存到站点留言箱。'}
             </p>
             <button
+              type="button"
               onClick={() => submitComment()}
               disabled={submitting || uploadingImage}
               className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
@@ -358,7 +337,7 @@ export default function Comments() {
           <div className="mt-6 rounded-2xl border border-indigo-400/40 bg-indigo-500/10 p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <p className="text-xs font-bold text-indigo-500">回复 {replyTarget.author}</p>
-              <button onClick={() => { setReplyTarget(null); setReplyContent(''); }} className="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-white">
+              <button type="button" onClick={() => { setReplyTarget(null); setReplyContent(''); }} className="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-white">
                 取消
               </button>
             </div>
@@ -371,6 +350,7 @@ export default function Comments() {
             />
             <div className="mt-3 flex justify-end">
               <button
+                type="button"
                 onClick={() => submitComment(replyTarget.id)}
                 disabled={submitting}
                 className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
@@ -387,38 +367,24 @@ export default function Comments() {
             <p className="text-center text-sm text-slate-500">还没有留言，来当第一个吧。</p>
           )}
           {rootComments.map((comment) => (
-            <article
-              key={comment.id}
-              className="rounded-2xl bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-slate-700/60 p-4 backdrop-blur-xl"
-            >
+            <article key={comment.id} className="rounded-2xl bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-slate-700/60 p-4 backdrop-blur-xl">
               <div className="flex items-center justify-between gap-4 mb-2">
                 <span className="text-sm font-black text-slate-800 dark:text-slate-100">{comment.author}</span>
-                <time className="text-[11px] text-slate-400">
-                  {new Date(comment.createdAt).toLocaleString('zh-CN')}
-                </time>
+                <time className="text-[11px] text-slate-400">{new Date(comment.createdAt).toLocaleString('zh-CN')}</time>
               </div>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
-                {renderCommentContent(comment.content)}
-              </p>
-              <button
-                onClick={() => setReplyTarget(comment)}
-                className="mt-3 text-xs font-black text-indigo-500 hover:text-indigo-600"
-              >
-                回复
-              </button>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">{renderCommentContent(comment.content)}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-4">
+                <button type="button" onClick={() => setReplyTarget(comment)} className="text-xs font-black text-indigo-500 hover:text-indigo-600">回复</button>
+              </div>
               {repliesByParent[comment.id]?.length > 0 && (
                 <div className="mt-4 space-y-3 border-l-2 border-indigo-400/40 pl-4">
                   {repliesByParent[comment.id].map((reply) => (
                     <div key={reply.id} className="rounded-2xl bg-white/25 dark:bg-slate-900/45 p-3">
                       <div className="mb-1 flex items-center justify-between gap-3">
                         <span className="text-xs font-black text-indigo-500">{reply.author}</span>
-                        <time className="text-[10px] text-slate-400">
-                          {new Date(reply.createdAt).toLocaleString('zh-CN')}
-                        </time>
+                        <time className="text-[10px] text-slate-400">{new Date(reply.createdAt).toLocaleString('zh-CN')}</time>
                       </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">
-                        {renderCommentContent(reply.content)}
-                      </p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">{renderCommentContent(reply.content)}</p>
                     </div>
                   ))}
                 </div>

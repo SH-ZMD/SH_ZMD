@@ -363,6 +363,10 @@ export default function AlchemyLab({ posts = [], chatters = [], moments = [] }: 
     const fetchGitalkComments = async () => {
       try {
         const { owner, repo } = siteConfig.gitalkConfig;
+        if (!owner || !repo) {
+          if (isMounted) setRealWishes([]);
+          return;
+        }
         const targetLabel = `workshop-${currentMonthStr}`;
         const issueRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/issues?labels=${targetLabel}`);
         const issues = await issueRes.json();

@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
+const COMMENT_ADMIN_TOKEN = process.env.COMMENT_ADMIN_TOKEN || '';
 const PRODUCTION_COMMENT_API = process.env.PRODUCTION_COMMENT_API || 'https://sh-zmd.vercel.app/api/comments';
 const COMMENT_COOLDOWN_MS = 15 * 1000;
 const lastCommentAt = new Map<string, number>();
@@ -16,6 +17,35 @@ export const runtime = 'nodejs';
 
 function normalizePageId(pageId: string) {
   return (pageId || '/').replace(/\s+/g, '-').slice(0, 80);
+}
+
+function canProxyProductionComments(req: Request) {
+  try {
+    const incomingUrl = new URL(req.url);
+    const targetUrl = new URL(PRODUCTION_COMMENT_API);
+    const forwardedHost = req.headers.get('x-forwarded-host') || req.headers.get('host') || incomingUrl.host;
+    const sameHost = forwardedHost.toLowerCase() === targetUrl.host.toLowerCase();
+    const samePath = incomingUrl.pathname.replace(/\/$/, '') === targetUrl.pathname.replace(/\/$/, '');
+    return !(sameHost && samePath);
+  } catch {
+    return false;
+  }
+}
+
+function isLocalRequest(req: Request) {
+  const url = new URL(req.url);
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host).toLowerCase();
+  return host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
+}
+
+function hasCommentAdminAccess(req: Request) {
+  if (isLocalRequest(req)) return true;
+  const providedToken = req.headers.get('x-comment-admin-token') || '';
+  return Boolean(COMMENT_ADMIN_TOKEN && providedToken === COMMENT_ADMIN_TOKEN);
+}
+
+function emptyCommentsResponse() {
+  return NextResponse.json({ comments: [] });
 }
 
 function getClientKey(req: Request) {
@@ -166,6 +196,16 @@ async function findIssue(pageId: string) {
 }
 
 async function proxyProductionComments(req: Request, init?: RequestInit) {
+  if (!canProxyProductionComments(req)) {
+    if (!init?.method || init.method === 'GET') {
+      return emptyCommentsResponse();
+    }
+    return NextResponse.json(
+      { error: '线上留言接口不能代理到自身。请在 Vercel 配置 COMMENT_GITHUB_TOKEN 后再发送留言。' },
+      { status: 503 }
+    );
+  }
+
   const incomingUrl = new URL(req.url);
   const targetUrl = `${PRODUCTION_COMMENT_API}${incomingUrl.search || ''}`;
 
@@ -228,15 +268,15 @@ async function findCommentIssues() {
     : [];
 }
 
-async function createIssue(pageId: string) {
-  if (!TOKEN) {
+async function createIssue(pageId: string, token = TOKEN) {
+  if (!token) {
     throw new Error('留言功能还缺 COMMENT_GITHUB_TOKEN 环境变量。');
   }
 
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues`, {
     method: 'POST',
     headers: {
-      ...githubHeaders(true),
+      ...githubHeaders(true, token),
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -342,9 +382,11 @@ export async function GET(req: Request) {
         if (localSummary.total > 0) {
           return NextResponse.json(localSummary);
         }
-        return proxyProductionComments(req);
+        if (canProxyProductionComments(req)) return proxyProductionComments(req);
+        return NextResponse.json(localSummary);
       } catch {
-        return proxyProductionComments(req);
+        if (canProxyProductionComments(req)) return proxyProductionComments(req);
+        return NextResponse.json({ total: 0, latestAt: null, comments: [] });
       }
     }
 
@@ -352,7 +394,8 @@ export async function GET(req: Request) {
     const issue = await findIssue(pageId);
 
     if (!issue) {
-      return proxyProductionComments(req);
+      if (canProxyProductionComments(req)) return proxyProductionComments(req);
+      return emptyCommentsResponse();
     }
 
     const res = await fetch(issue.comments_url, {
@@ -377,26 +420,20 @@ export async function GET(req: Request) {
     }).reverse();
 
     if (comments.length === 0) {
-      return proxyProductionComments(req);
+      if (canProxyProductionComments(req)) return proxyProductionComments(req);
+      return emptyCommentsResponse();
     }
 
     return NextResponse.json({ comments });
   } catch (error: any) {
-    return proxyProductionComments(req);
+    if (canProxyProductionComments(req)) return proxyProductionComments(req);
+    return NextResponse.json({ error: error.message || '读取留言失败' }, { status: 502 });
   }
 }
 
 export async function POST(req: Request) {
   try {
     const bodyText = await req.text();
-    const remaining = checkRateLimit(req);
-    if (remaining > 0) {
-      return NextResponse.json({ error: `发消息太快啦，请等待 ${remaining}s 后再发送（至少间隔 15s）。` }, { status: 429 });
-    }
-    if (!TOKEN) {
-      return proxyProductionComments(req, { method: 'POST', body: bodyText });
-    }
-
     const body = JSON.parse(bodyText || '{}');
     const pageId = normalizePageId(body.pageId || '/');
     const author = String(body.author || '路过的朋友').trim().slice(0, 40) || '路过的朋友';
@@ -407,11 +444,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: '留言内容不能为空。' }, { status: 400 });
     }
 
-    const issue = await findIssue(pageId) || await createIssue(pageId);
+    const writeToken = await getWriteToken();
+    if (!writeToken) {
+      return proxyProductionComments(req, { method: 'POST', body: bodyText });
+    }
+
+    const remaining = checkRateLimit(req);
+    if (remaining > 0) {
+      return NextResponse.json({ error: `发消息太快啦，请等待 ${remaining}s 后再发送（至少间隔 15s）。` }, { status: 429 });
+    }
+
+    const issue = await findIssue(pageId) || await createIssue(pageId, writeToken);
     const res = await fetch(issue.comments_url, {
       method: 'POST',
       headers: {
-        ...githubHeaders(true),
+        ...githubHeaders(true, writeToken),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -440,6 +487,10 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    if (!hasCommentAdminAccess(req)) {
+      return NextResponse.json({ error: '删除留言只允许本地客户端或管理员接口调用。' }, { status: 403 });
+    }
+
     const body = await req.json().catch(() => ({}));
     const url = new URL(req.url);
     const commentId = String(body.commentId || url.searchParams.get('commentId') || '').trim();
