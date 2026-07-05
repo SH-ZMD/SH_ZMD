@@ -75,6 +75,18 @@ function formatTags(value: string) {
   return value.split(',').map((item) => item.trim()).filter(Boolean);
 }
 
+function isLocalManagerRuntime() {
+  if (typeof window === 'undefined') return false;
+  const { hostname, protocol } = window.location;
+  return (
+    protocol === 'file:' ||
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname === '[::1]'
+  );
+}
+
 export default function ArchiveCollectionsClient({ initialCollections }: { initialCollections: ArchiveCollection[] }) {
   const [collections, setCollections] = useState<ArchiveCollection[]>(normalizeCollections(initialCollections));
   const [sources, setSources] = useState<ArchiveSources>(emptySources);
@@ -85,10 +97,17 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
   const [sourceTab, setSourceTab] = useState<ArchiveItemType>('chatter');
   const [loadingSources, setLoadingSources] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [canManage, setCanManage] = useState(false);
   const operations = useOptionalOperations();
   const { showToast } = useToast();
+  const canEdit = canManage && Boolean(operations);
 
   useEffect(() => {
+    setCanManage(isLocalManagerRuntime());
+  }, []);
+
+  useEffect(() => {
+    if (!canManage) return;
     const load = async () => {
       setLoadingSources(true);
       try {
@@ -111,7 +130,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
       }
     };
     load();
-  }, []);
+  }, [canManage]);
 
   const filteredCollections = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -128,6 +147,10 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
   }, [sources, sourceTab, sourceQuery]);
 
   const saveCollections = async (nextCollections: ArchiveCollection[]) => {
+    if (!canEdit) {
+      showToast('归档栏目只能在本地客户端管理。', 'warning');
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch('/api/local-archive-collections?action=save', {
@@ -149,7 +172,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
           },
           timestamp: new Date().toLocaleString(),
         });
-      showToast(operations ? '归档栏目已保存，记得更新本地' : '归档栏目已保存', 'success');
+      showToast('归档栏目已保存，记得更新本地', 'success');
       setEditing(null);
     } catch (error) {
       showToast(error instanceof Error ? error.message : '归档栏目保存失败', 'error');
@@ -159,6 +182,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
   };
 
   const commitEdit = () => {
+    if (!canEdit) return;
     if (!editing) return;
     const cleanTitle = editing.title.trim();
     if (!cleanTitle) {
@@ -175,12 +199,14 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
   };
 
   const deleteCollection = (id: string) => {
+    if (!canEdit) return;
     const next = collections.filter((item) => item.id !== id);
     setActiveId(next[0]?.id || null);
     saveCollections(next);
   };
 
   const addSourceItem = (item: ArchiveItem) => {
+    if (!canEdit) return;
     if (!editing) return;
     if (editing.items.some((x) => x.type === item.type && x.id === item.id)) {
       showToast('这个内容已经在栏目里了', 'info');
@@ -190,6 +216,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
   };
 
   const removeEditingItem = (index: number) => {
+    if (!canEdit) return;
     if (!editing) return;
     setEditing({ ...editing, items: editing.items.filter((_, i) => i !== index), updatedAt: Date.now() });
   };
@@ -236,7 +263,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
             <Search size={16} className="text-slate-400" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} className="w-full bg-transparent text-sm font-bold text-slate-700 outline-none dark:text-slate-100" placeholder="搜索栏目、总结或收录内容" />
           </label>
-          {operations && (
+          {canEdit && (
             <button onClick={() => setEditing(createCollection())} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-indigo-500 px-5 text-sm font-black text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-600">
               <Plus size={16} /> 新建栏目
             </button>
@@ -244,9 +271,9 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
         </div>
 
         {collections.length === 0 ? (
-          <button onClick={() => operations && setEditing(createCollection())} className="w-full rounded-[28px] border-2 border-dashed border-indigo-300/70 bg-indigo-500/5 px-6 py-20 text-center transition hover:bg-indigo-500/10">
+          <button onClick={() => canEdit && setEditing(createCollection())} className="w-full rounded-[28px] border-2 border-dashed border-indigo-300/70 bg-indigo-500/5 px-6 py-20 text-center transition hover:bg-indigo-500/10">
             <Plus className="mx-auto mb-4 text-indigo-500" size={36} />
-            <span className="text-sm font-black text-indigo-600 dark:text-indigo-300">{operations ? '创建第一个归档栏目' : '还没有公开归档栏目'}</span>
+            <span className="text-sm font-black text-indigo-600 dark:text-indigo-300">{canEdit ? '创建第一个归档栏目' : '还没有公开归档栏目'}</span>
           </button>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
@@ -280,7 +307,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
                       <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-3 py-1.5 text-xs font-black text-indigo-600 dark:text-indigo-300">
                         <Sparkles size={14} /> {activeCollection.items.length} 项归档
                       </div>
-                      {operations && (
+                      {canEdit && (
                         <div className="flex gap-2">
                           <button onClick={() => setEditing(activeCollection)} className="inline-flex h-10 items-center gap-2 rounded-2xl bg-slate-900 px-4 text-xs font-black text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900"><Edit3 size={14} /> 编辑</button>
                           <button onClick={() => deleteCollection(activeCollection.id)} className="grid h-10 w-10 place-items-center rounded-2xl bg-rose-500/10 text-rose-600 transition hover:bg-rose-500 hover:text-white"><Trash2 size={14} /></button>
@@ -306,7 +333,7 @@ export default function ArchiveCollectionsClient({ initialCollections }: { initi
       </section>
 
       <AnimatePresence>
-        {editing && (
+        {canEdit && editing && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/55 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, y: 24, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 24, scale: 0.97 }} className="relative grid max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-[32px] border border-white/30 bg-white/95 shadow-2xl dark:border-white/10 dark:bg-slate-950/95 lg:grid-cols-[1fr_420px]">
