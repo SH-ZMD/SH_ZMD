@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import sharp from 'sharp';
 
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
@@ -13,6 +12,25 @@ const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 export const runtime = 'nodejs';
+
+type SharpFactory = (input: Buffer) => any;
+
+let sharpLoader: Promise<SharpFactory | null> | null = null;
+
+async function loadOptionalSharp() {
+  if (!sharpLoader) {
+    sharpLoader = (async () => {
+      try {
+        const dynamicImport = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<any>;
+        const mod = await dynamicImport('sharp');
+        return (mod.default || mod) as SharpFactory;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return sharpLoader;
+}
 
 function canProxyProductionImages(req: Request) {
   try {
@@ -112,6 +130,18 @@ async function prepareImage(file: File) {
   const sourceExt = extensionForType(sourceType);
 
   if (sourceType === 'image/gif') {
+    return {
+      imageBuffer: original,
+      imageType: sourceType,
+      imageExt: sourceExt,
+      thumbnailBuffer: original,
+      thumbnailType: sourceType,
+      thumbnailExt: sourceExt,
+    };
+  }
+
+  const sharp = await loadOptionalSharp();
+  if (!sharp) {
     return {
       imageBuffer: original,
       imageType: sourceType,
