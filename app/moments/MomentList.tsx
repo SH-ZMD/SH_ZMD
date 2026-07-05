@@ -7,6 +7,7 @@ import MomentComments from '../../components/MomentComments';
 import { useToast } from '../../components/ToastProvider';
 import { siteConfig } from '../../siteConfig';
 import { useOperations } from '../../context/OperationContext';
+import { useLocalManagerRuntime } from '../../lib/localManagerRuntime';
 
 function timeAgo(dateStr: string) {
   const date = new Date(dateStr);
@@ -26,6 +27,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
   const { showToast } = useToast();
   const { operations, addOperation, removeOperation } = useOperations();
+  const canManage = useLocalManagerRuntime();
 
   const [isPublishOpen, setIsPublishOpen] = useState(false);
   const [newMoment, setNewMoment] = useState({ content: '', location: '', images: [] as string[] });
@@ -43,7 +45,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
     let baseMoments = moments ? [...moments] : [];
 
     // 拦截并在顶层混合暂缓队列的数据
-    const pendingMoments = operations
+    const pendingMoments = canManage ? operations
       .filter(op => op.type === 'create_moment')
       .map(op => {
         const payload = op.payload && typeof op.payload === 'object' ? op.payload : {};
@@ -52,7 +54,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
           opId: op.id,
           isPending: true
         };
-      });
+      }) : [];
 
     let result = [...pendingMoments, ...baseMoments].map(m => ({ ...m, hidden: hiddenMap[m.id] ?? m.hidden }));
 
@@ -70,7 +72,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
     });
     return result;
-  }, [moments, searchQuery, sortOrder, operations, hiddenMap]);
+  }, [moments, searchQuery, sortOrder, operations, hiddenMap, canManage]);
 
   const nextImg = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -85,6 +87,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const handleFileUpload = async (files: FileList | File[]) => {
+    if (!canManage) return;
     setIsUploading(true);
     showToast(`正在导入 ${files.length} 张本地图片...`, "info");
     try {
@@ -121,12 +124,14 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    if (!canManage) return;
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) handleFileUpload(e.dataTransfer.files);
   };
 
   const handleAddImageUrl = () => {
+    if (!canManage) return;
     if (imageUrlInput.trim()) {
       setNewMoment(prev => ({ ...prev, images: [...prev.images, imageUrlInput.trim()] }));
       setImageUrlInput('');
@@ -135,6 +140,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const handleQueueMoment = () => {
+    if (!canManage) return;
     if (!newMoment.content.trim()) {
       showToast("内容不能为空哦！", "warning");
       return;
@@ -159,6 +165,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const handleDirectPublish = async () => {
+    if (!canManage) return;
     if (!newMoment.content.trim()) {
       showToast("说说内容不能为空！", "error");
       return;
@@ -205,6 +212,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const executeDelete = async () => {
+    if (!canManage) return;
     if (!deleteConfirmId) return;
     setIsDeleting(true);
     try {
@@ -234,6 +242,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const handleDeleteClick = (moment: any) => {
+    if (!canManage) return;
     if (moment.isPending) {
       removeOperation(moment.opId);
       showToast("已撤销暂缓的说说", "success");
@@ -243,6 +252,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   };
 
   const toggleHidden = async (moment: any) => {
+    if (!canManage) return;
     const nextHidden = !moment.hidden;
     try {
       const configRes = await fetch(`/backend_config.json?t=${Date.now()}`);
@@ -320,20 +330,23 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
         </div>
       )}
 
-      {/* 悬浮删除按钮 */}
-      <button
-        onClick={() => handleDeleteClick(moment)}
-        className={`absolute ${moment.isPending ? 'top-10' : 'top-6'} right-6 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all duration-300 shadow-sm z-10`}
-      >
-        <Trash2 size={14} />
-      </button>
-      <button
-        onClick={() => toggleHidden(moment)}
-        className={`absolute ${moment.isPending ? 'top-10' : 'top-6'} right-16 w-8 h-8 rounded-full text-white flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all duration-300 shadow-sm z-10 ${moment.hidden ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-900'}`}
-        title={moment.hidden ? '恢复显示' : '暂时隐藏'}
-      >
-        {moment.hidden ? <Eye size={14} /> : <EyeOff size={14} />}
-      </button>
+      {canManage && (
+        <>
+          <button
+            onClick={() => handleDeleteClick(moment)}
+            className={`absolute ${moment.isPending ? 'top-10' : 'top-6'} right-6 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-red-500 hover:text-white flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all duration-300 shadow-sm z-10`}
+          >
+            <Trash2 size={14} />
+          </button>
+          <button
+            onClick={() => toggleHidden(moment)}
+            className={`absolute ${moment.isPending ? 'top-10' : 'top-6'} right-16 w-8 h-8 rounded-full text-white flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all duration-300 shadow-sm z-10 ${moment.hidden ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-700 hover:bg-slate-900'}`}
+            title={moment.hidden ? '恢复显示' : '暂时隐藏'}
+          >
+            {moment.hidden ? <Eye size={14} /> : <EyeOff size={14} />}
+          </button>
+        </>
+      )}
 
       <div className={`flex items-center gap-4 mb-8 pb-6 border-b border-slate-200/50 dark:border-slate-700/50 relative ${moment.isPending ? 'mt-4' : ''}`}>
         <div className="w-14 h-14 shrink-0 rounded-2xl overflow-hidden shadow-md border-2 border-white dark:border-slate-700">
@@ -381,14 +394,16 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       </div>
 
       <div className="mb-16 flex flex-col items-center gap-8">
-        <button
-          onClick={() => setIsPublishOpen(true)}
-          className="group relative px-10 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg shadow-indigo-500/30 text-white font-black tracking-widest text-sm hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-          <Plus size={18} className="relative z-10" />
-          <span className="relative z-10">写点什么...</span>
-        </button>
+        {canManage && (
+          <button
+            onClick={() => setIsPublishOpen(true)}
+            className="group relative px-10 py-3.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl shadow-lg shadow-indigo-500/30 text-white font-black tracking-widest text-sm hover:shadow-indigo-500/50 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+            <Plus size={18} className="relative z-10" />
+            <span className="relative z-10">写点什么...</span>
+          </button>
+        )}
 
         <div className="relative w-full max-w-lg group">
           <Search className="w-6 h-6 absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors z-20 pointer-events-none" />
@@ -438,7 +453,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
       {/* 发布弹窗 */}
       <AnimatePresence>
-        {isPublishOpen && (
+        {canManage && isPublishOpen && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -569,7 +584,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {deleteConfirmId && (
+        {canManage && deleteConfirmId && (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteConfirmId(null)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="relative w-full max-w-sm bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[40px] shadow-2xl border border-white/50 p-10 text-center">

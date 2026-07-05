@@ -1,25 +1,30 @@
-// src/app/about/page.tsx
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import Link from 'next/link';
+import { Suspense } from 'react';
+
+// 🌟 1. 核心升级：引入现代统一解析流，并挂载 remark-gfm
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm'; // 🌟 引入 GFM 以支持 ~~删除线~~
 import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
-import rehypeKatex from 'rehype-katex';
 import rehypeStringify from 'rehype-stringify';
-
-// 引入高亮主题
+import rehypeKatex from 'rehype-katex';
 import 'highlight.js/styles/atom-one-dark.css';
 import 'katex/dist/katex.min.css';
 
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
-import AboutClient from '../../components/AboutClient';
-import { Suspense } from 'react';
+import { siteConfig } from '../../siteConfig';
+import LocalManagerOnly from '../../components/LocalManagerOnly';
 
+// 🌟 引入刚刚写好的前端交互引擎
+import AboutClient from '../../components/AboutClient';
+
+// 🌟 读取指定目录下的 markdown 文件，并提取属性
 function getDirActivities(dirName: string, typeLabel: '文章' | '杂谈' | '说说', linkPrefix: string) {
   const dirPath = path.join(process.cwd(), dirName);
   if (!fs.existsSync(dirPath)) return [];
@@ -33,13 +38,14 @@ function getDirActivities(dirName: string, typeLabel: '文章' | '杂谈' | '说
       id: `${dirName}-${file}`,
       type: typeLabel,
       title: data.title || file.replace('.md', ''),
+      // 保留完整 ISO 时间供前端处理
       date: data.date ? new Date(data.date).toISOString() : '1970-01-01T00:00:00Z',
       url: `/${linkPrefix}/${file.replace('.md', '')}`
     };
   });
 }
 
-export default async function AboutPage() {
+export default async function AdminAboutPage() {
   const fullPath = path.join(process.cwd(), 'app', 'about', 'about.md');
   let contentHtml = "博主很懒，还没有写自我介绍哦...";
   let coverImage = "https://bu.dusays.com/2026/03/24/69c23dc278c78.jpg";
@@ -48,6 +54,7 @@ export default async function AboutPage() {
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     // 🌟 改为 let，以便进行文本预清洗
     let { data, content } = matter(fileContents);
+
     if (data.cover) coverImage = data.cover;
 
     // ==========================================
@@ -58,7 +65,7 @@ export default async function AboutPage() {
     // 2. 强行修复数字列表缺少空格导致无法渲染为列表的 Bug (1.百度 -> 1. 百度)
     content = content.replace(/^(\s*\d+)\.([^ \n])/gm, '$1. $2');
 
-    // 3. 🌟 拯救被 Markdown 引擎吞噬的“连续空行” (同步前台展示页的阵法)
+    // 3. 🌟 拯救被 Markdown 引擎吞噬的“连续空行” (同步文章页的阵法)
     content = content.replace(/\r\n/g, '\n').replace(/^[ \t]+$/gm, '');
     const blocks = content.split(/(```[\s\S]*?```|~~~[\s\S]*?~~~)/g);
     content = blocks.map((block, index) => {
@@ -70,12 +77,13 @@ export default async function AboutPage() {
     }).join('');
     // ==========================================
 
+    // 🌟 2. 启用全新解析引擎：支持代码高亮与删除线
     const processedContent = await unified()
       .use(remarkParse)
       .use(remarkGfm) // 🌟 挂载 GFM 解析
       .use(remarkMath)
       .use(remarkRehype, { allowDangerousHtml: true })
-      // 🌟 核心修复：开启自动语言侦测，并限制语言白名单！
+      // 🌟 核心升级：开启自动侦测，并限制白名单，大幅提高 C++ 等语言的猜中率
       // @ts-ignore
       .use(rehypeHighlight, {
         detect: true,
@@ -91,10 +99,12 @@ export default async function AboutPage() {
     console.error("读取 about.md 失败", e);
   }
 
+  // 🌟 3. 获取所有的活动动态
   const posts = getDirActivities('posts', '文章', 'posts');
   const chatters = getDirActivities('chatters', '杂谈', 'chatter');
   const moments = getDirActivities('moments', '说说', 'moments');
 
+  // 将所有动态合并，并按时间倒序排列 (最新的在最上面)
   const allActivities = [...posts, ...chatters, ...moments].sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
@@ -102,6 +112,7 @@ export default async function AboutPage() {
   return (
     <div className="min-h-screen relative pb-20">
       <Navbar />
+
       <PageTransition>
         <main className="w-[95%] md:w-[90%] max-w-4xl mx-auto mt-24 md:mt-28 relative z-10">
 
@@ -216,14 +227,32 @@ export default async function AboutPage() {
             }
           `}} />
 
-          <Suspense fallback={<div className="h-96 flex items-center justify-center text-slate-500 font-bold animate-pulse">正在载入档案...</div>}>
-            {/* 🌟 组件原封不动，安全可靠 */}
+          <LocalManagerOnly>
+            <div className="absolute top-4 right-4 md:top-6 md:right-8 z-50">
+              <Link
+                href="/editor?type=about"
+                className="p-2.5 md:px-4 md:py-2.5 rounded-xl md:rounded-2xl bg-white/30 dark:bg-slate-900/40 backdrop-blur-md text-slate-800 dark:text-slate-100 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 transition-all shadow-lg border border-white/50 dark:border-white/10 group flex items-center gap-2 active:scale-95"
+              >
+                <span className="text-base md:text-lg">✏️</span>
+                <span className="text-xs md:text-sm font-bold hidden md:inline-block group-hover:inline-block">修改此页</span>
+              </Link>
+            </div>
+          </LocalManagerOnly>
+
+          {/* 🌟 5. 载入前端互动引擎 */}
+          <Suspense fallback={
+            <div className="h-96 flex flex-col gap-4 items-center justify-center text-slate-500 font-bold bg-white/40 dark:bg-slate-800/40 rounded-[40px] animate-pulse">
+              <span className="text-3xl">📡</span>
+              正在连线源石数据库...
+            </div>
+          }>
             <AboutClient
               contentHtml={contentHtml}
               coverImage={coverImage}
               activities={allActivities}
             />
           </Suspense>
+
         </main>
       </PageTransition>
     </div>

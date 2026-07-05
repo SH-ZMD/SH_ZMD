@@ -6,8 +6,10 @@ import PageTransition from '../../components/PageTransition';
 import MomentList from './MomentList';
 import { siteConfig } from '../../siteConfig';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
-  title: "说说 | " + siteConfig.title,
+  title: "说说 | " + siteConfig.authorName + " の 博客",
   description: "生活动态与瞬间记录",
 };
 
@@ -27,13 +29,13 @@ export default function MomentsPage() {
         fileNames.forEach(fileName => {
           const fullPath = path.join(dir, fileName);
           const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
-          if (data.hidden === true) return;
 
           allMoments.push({
             id: fileName.replace(/\.md$/, ''),
             date: data.date || '1970-01-01',
             location: data.location || '',
             images: data.images || [],
+            hidden: data.hidden === true,
             content: content.trim()
           });
         });

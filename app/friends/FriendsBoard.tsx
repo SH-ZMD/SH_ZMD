@@ -8,6 +8,7 @@ import { Plus, Pencil, Trash2, AlertTriangle, Save, Edit3, X, CloudUpload, Spark
 import { useOperations } from '../../context/OperationContext';
 import { useToast } from '../../components/ToastProvider';
 import FloatingImageTool from '../../components/editor/FloatingImageTool';
+import { useLocalManagerRuntime } from '../../lib/localManagerRuntime';
 
 // 🌟 新增：引入配置和评论组件
 import Comments from '../../components/Comments';
@@ -26,6 +27,7 @@ const itemVariants: Variants = {
 export default function FriendsBoard() {
   const { addOperation } = useOperations();
   const { showToast } = useToast();
+  const canManage = useLocalManagerRuntime();
 
   const [editableFriends, setEditableFriends] = useState<Friend[]>(initialFriends);
 
@@ -44,6 +46,7 @@ export default function FriendsBoard() {
   };
 
   const syncToQueue = (nextList: Friend[]) => {
+    if (!canManage) return;
     addOperation({
       id: `sync_friends_${Date.now()}`,
       type: "sync_friends",
@@ -54,6 +57,7 @@ export default function FriendsBoard() {
   };
 
   const handleSaveFriend = () => {
+    if (!canManage) return;
     const { mode, data } = friendModal;
     if (!data.name || !data.url) { showToast("名称和 URL 不能为空哦", "warning"); return; }
 
@@ -77,6 +81,7 @@ export default function FriendsBoard() {
   };
 
   const confirmDelete = () => {
+    if (!canManage) return;
     const next = editableFriends.filter(f => f.id !== deleteModal.id);
     setEditableFriends(next);
     syncToQueue(next);
@@ -86,18 +91,20 @@ export default function FriendsBoard() {
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-10 py-10 relative z-10">
 
-      <FloatingImageTool
-        key={isImgToolOpen ? 'tool-open' : 'tool-closed'}
-        isOpen={isImgToolOpen}
-        onClose={() => setIsImgToolOpen(false)}
-        onInsert={(url) => {
-          setFriendModal(prev => ({ ...prev, data: { ...prev.data, avatar: url } }));
-          setIsImgToolOpen(false);
-        }}
-      />
+      {canManage && (
+        <FloatingImageTool
+          key={isImgToolOpen ? 'tool-open' : 'tool-closed'}
+          isOpen={isImgToolOpen}
+          onClose={() => setIsImgToolOpen(false)}
+          onInsert={(url) => {
+            setFriendModal(prev => ({ ...prev, data: { ...prev.data, avatar: url } }));
+            setIsImgToolOpen(false);
+          }}
+        />
+      )}
 
       <AnimatePresence>
-        {deleteModal.isOpen && (
+        {canManage && deleteModal.isOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-sm bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl rounded-[40px] shadow-2xl border border-white/50 p-10 text-center">
@@ -114,7 +121,7 @@ export default function FriendsBoard() {
       </AnimatePresence>
 
       <AnimatePresence>
-        {friendModal.isOpen && (
+        {canManage && friendModal.isOpen && (
           <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="relative w-full max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl rounded-[40px] border border-white/20 p-8 shadow-2xl overflow-hidden">
@@ -156,20 +163,24 @@ export default function FriendsBoard() {
 
       <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-        <motion.div variants={itemVariants} onClick={() => setFriendModal({ isOpen: true, mode: 'add', data: {} })} className="group cursor-pointer flex flex-col items-center justify-center min-h-[200px] rounded-3xl border-4 border-dashed border-slate-300 dark:border-slate-700 bg-white/10 hover:border-indigo-500 hover:bg-indigo-500/5 transition-all duration-500">
-            <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-md group-hover:rotate-90">
-              <Plus size={32} />
-            </div>
-            <span className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-indigo-500">添加新朋友</span>
-        </motion.div>
+        {canManage && (
+          <motion.div variants={itemVariants} onClick={() => setFriendModal({ isOpen: true, mode: 'add', data: {} })} className="group cursor-pointer flex flex-col items-center justify-center min-h-[200px] rounded-3xl border-4 border-dashed border-slate-300 dark:border-slate-700 bg-white/10 hover:border-indigo-500 hover:bg-indigo-500/5 transition-all duration-500">
+              <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-indigo-500 group-hover:text-white transition-all shadow-md group-hover:rotate-90">
+                <Plus size={32} />
+              </div>
+              <span className="mt-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-indigo-500">添加新朋友</span>
+          </motion.div>
+        )}
 
         {editableFriends.map((friend) => (
           <motion.div key={friend.id} variants={itemVariants} className="group relative">
 
-            <div className="absolute top-4 right-4 z-30 flex gap-2 opacity-0 group-hover:opacity-100 transition-all -translate-y-2 group-hover:translate-y-0">
-               <button onClick={() => setFriendModal({ isOpen: true, mode: 'edit', data: friend })} className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><Edit3 size={14}/></button>
-               <button onClick={() => setDeleteModal({ isOpen: true, id: friend.id, name: friend.name })} className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><Trash2 size={14}/></button>
-            </div>
+            {canManage && (
+              <div className="absolute top-4 right-4 z-30 flex gap-2 opacity-0 group-hover:opacity-100 transition-all -translate-y-2 group-hover:translate-y-0">
+                 <button onClick={() => setFriendModal({ isOpen: true, mode: 'edit', data: friend })} className="w-8 h-8 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><Edit3 size={14}/></button>
+                 <button onClick={() => setDeleteModal({ isOpen: true, id: friend.id, name: friend.name })} className="w-8 h-8 rounded-lg bg-red-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform"><Trash2 size={14}/></button>
+              </div>
+            )}
 
             <a href={friend.url} target="_blank" rel="noopener noreferrer" className="block h-full rounded-3xl bg-white/60 dark:bg-slate-800/50 backdrop-blur-xl border border-white/40 dark:border-white/10 shadow-xl overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:scale-[1.02] p-6 relative">
               <div className="absolute -bottom-10 -right-10 w-32 h-32 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{ backgroundColor: friend.themeColor }}></div>

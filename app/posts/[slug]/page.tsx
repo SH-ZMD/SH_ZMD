@@ -23,6 +23,7 @@ import ClientTOC from '../../../components/ClientTOC';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import SidebarLyric from '../../../components/SidebarLyric';
+import LocalManagerOnly from '../../../components/LocalManagerOnly';
 
 export async function generateStaticParams() {
   const postsDirectory = path.join(process.cwd(), 'posts');
@@ -148,7 +149,15 @@ export default async function Post({ params }: { params: Promise<{ slug: string 
                   {postData.title}
                 </h1>
 
-                {/* ✅ 前端展示：修改此篇的特权按钮已经彻底移除 */}
+                <LocalManagerOnly>
+                  <Link
+                    href={`/editor?id=${postData.slug}&type=post`}
+                    className="absolute top-0 right-0 p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white transition-all shadow-sm border border-slate-200 dark:border-slate-700 group flex items-center gap-2 active:scale-95 z-50"
+                  >
+                    <span className="text-base md:text-lg">✏️</span>
+                    <span className="text-xs md:text-sm font-bold hidden md:inline-block group-hover:inline-block">修改此篇</span>
+                  </Link>
+                </LocalManagerOnly>
 
                 <div className="flex flex-wrap items-center gap-2 md:gap-3">
                   <div className="flex items-center gap-1.5 md:gap-2 text-indigo-700 dark:text-indigo-400 font-bold bg-white/30 dark:bg-slate-900/50 px-3 md:px-4 py-1.5 md:py-2 rounded-full w-max text-xs md:text-sm transition-colors duration-700 shadow-sm border border-white/20 dark:border-white/5">

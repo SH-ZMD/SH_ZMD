@@ -131,11 +131,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             `}} />
           </MusicProvider>
 
-          {/* 本地管理客户端禁用煤球悬浮猫，避免遮挡设置/表格操作。 */}
-          {/* <div className="hidden md:block">
-            <LazyCyberCat />
-          </div> */}
-
             </OperationProvider>
           </ToastProvider>
         </ThemeProvider>

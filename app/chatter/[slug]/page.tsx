@@ -23,6 +23,7 @@ import ClientSocials from '../../../components/ClientSocials';
 import SidebarLyric from '../../../components/SidebarLyric';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
+import LocalManagerOnly from '../../../components/LocalManagerOnly';
 
 export async function generateStaticParams() {
   const chattersDirectory = path.join(process.cwd(), 'chatters');
@@ -162,14 +163,15 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
                   {chatterData.title}
                 </h1>
 
-                {/* ✅ 控制台专供：修改此篇按钮保留 */}
-                <Link
-                  href={`/editor?id=${chatterData.slug}&type=chatter`}
-                  className="absolute top-0 right-0 p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white transition-all shadow-sm border border-slate-200 dark:border-slate-700 group flex items-center gap-2 active:scale-95 z-50"
-                >
-                  <span className="text-base md:text-lg">✏️</span>
-                  <span className="text-xs md:text-sm font-bold hidden md:inline-block group-hover:inline-block">修改此篇</span>
-                </Link>
+                <LocalManagerOnly>
+                  <Link
+                    href={`/editor?id=${chatterData.slug}&type=chatter`}
+                    className="absolute top-0 right-0 p-2.5 md:p-3 rounded-xl md:rounded-2xl bg-white/50 dark:bg-slate-800/50 text-slate-600 dark:text-slate-300 hover:bg-indigo-500 hover:text-white transition-all shadow-sm border border-slate-200 dark:border-slate-700 group flex items-center gap-2 active:scale-95 z-50"
+                  >
+                    <span className="text-base md:text-lg">✏️</span>
+                    <span className="text-xs md:text-sm font-bold hidden md:inline-block group-hover:inline-block">修改此篇</span>
+                  </Link>
+                </LocalManagerOnly>
 
                 <div className="flex flex-wrap items-center gap-2 md:gap-3">
                   <div className="flex items-center gap-1.5 md:gap-2 text-indigo-700 dark:text-indigo-400 font-bold bg-indigo-500/5 dark:bg-indigo-400/10 px-3 md:px-4 py-1.5 md:py-2 rounded-2xl text-xs md:text-sm border border-indigo-500/10">

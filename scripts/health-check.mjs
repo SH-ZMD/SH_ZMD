@@ -11,14 +11,15 @@ const publicJsonFiles = [
 
 const criticalTextFiles = [
   'components/Navbar.tsx',
+  'components/Navbar.public.tsx',
   'components/KeyUrlPublicTable.tsx',
   'components/settings/KeyUrlSection.tsx',
   'components/settings/LifeModulesSection.tsx',
   'app/settings/page.tsx',
+  'app/photowall/page.public.tsx',
   'app/recommendations/page.tsx',
   'app/key-urls/page.tsx',
   'app/share/page.tsx',
-  'app/api/public-chat/route.ts',
   'cms_core/api/sync.py',
   'cms_core/api/key_url_tables.py',
   'cms_core/api/drafts.py',
@@ -32,11 +33,68 @@ const mojibakePatterns = [
   /Key 与链接/,
 ];
 
+const publicNavbarFile = fs.existsSync(path.join(root, 'components/Navbar.public.tsx')) ? 'components/Navbar.public.tsx' : 'components/Navbar.tsx';
+const publicPhotoWallFile = fs.existsSync(path.join(root, 'app/photowall/page.public.tsx')) ? 'app/photowall/page.public.tsx' : 'app/photowall/page.tsx';
+const isManagerSource = fs.existsSync(path.join(root, 'components/Navbar.public.tsx')) || fs.existsSync(path.join(root, 'app/photowall/page.public.tsx'));
+
+const publicRetiredFiles = [
+  'app/api/chat/route.ts',
+  'app/api/public-chat/route.ts',
+  'app/api/local-archive-collections/route.ts',
+  'app/api/local-key-url-tables/route.ts',
+  'app/api/local-life-modules/route.ts',
+  'components/CyberCat.tsx',
+  'components/LazyCyberCat.tsx',
+  'components/PendingOperationsInbox.tsx',
+  'components/CommentNotifier.tsx',
+  'components/WalineComments.tsx',
+];
+
 const interfaceChecks = [
   {
-    file: 'components/Navbar.tsx',
+    file: 'app/layout.tsx',
+    required: [],
+    forbidden: ['LazyCyberCat'],
+  },
+  {
+    file: publicNavbarFile,
     required: ['推荐表', '中转站', '/recommendations', '/key-urls'],
-    forbidden: ["{ name: '分享表'"],
+    forbidden: ["{ name: '分享表'", "{ name: '设置'", "{ name: '草稿箱'", '/settings', '/drafts', '/photowall', 'PendingOperationsInbox'],
+  },
+  {
+    file: publicPhotoWallFile,
+    required: ['notFound()'],
+    forbidden: ['PhotoWallPage', '创建新相册', '添加碎片', 'useOperations'],
+  },
+  {
+    file: 'app/moments/MomentList.tsx',
+    required: ['useLocalManagerRuntime', 'canManage && isPublishOpen', 'canManage && deleteConfirmId'],
+    forbidden: [],
+  },
+  {
+    file: 'app/chatter/ChatterBoard.tsx',
+    required: ['useLocalManagerRuntime', 'canManage && deleteModal.isOpen', 'canManage ? chatters : chatters.filter'],
+    forbidden: [],
+  },
+  {
+    file: 'app/friends/FriendsBoard.tsx',
+    required: ['useLocalManagerRuntime', 'canManage && friendModal.isOpen', 'canManage && deleteModal.isOpen'],
+    forbidden: [],
+  },
+  {
+    file: 'app/posts/[slug]/page.tsx',
+    required: ['LocalManagerOnly', 'href={`/editor?id=${postData.slug}&type=post`}'],
+    forbidden: [],
+  },
+  {
+    file: 'app/chatter/[slug]/page.tsx',
+    required: ['LocalManagerOnly', 'href={`/editor?id=${chatterData.slug}&type=chatter`}'],
+    forbidden: [],
+  },
+  {
+    file: 'app/about/page.tsx',
+    required: ['LocalManagerOnly', 'href="/editor?type=about"'],
+    forbidden: [],
   },
   {
     file: 'app/share/page.tsx',
@@ -211,6 +269,16 @@ for (const check of interfaceChecks) {
   if (missing.length) failures.push(`${check.file} is missing interface markers: ${missing.join(', ')}`);
   if (stale.length) failures.push(`${check.file} still contains stale markers: ${stale.join(', ')}`);
   if (!missing.length && !stale.length) console.log(`INTERFACE OK: ${check.file}`);
+}
+
+if (!isManagerSource) {
+  for (const file of publicRetiredFiles) {
+    if (fs.existsSync(path.join(root, file))) {
+      failures.push(`${file} is local-only or retired and must not exist in the public site`);
+    } else {
+      console.log(`PUBLIC BOUNDARY OK: ${file} is absent`);
+    }
+  }
 }
 
 try {

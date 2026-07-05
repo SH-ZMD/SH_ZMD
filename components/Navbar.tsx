@@ -76,7 +76,6 @@ export default function Navbar() {
   const primaryNavLinks = [
     { name: '首页', href: '/' },
     { name: '归档', href: '/timeline' },
-    { name: '照片墙', href: '/photowall' },
     { name: '音乐', href: '/music' },
     { name: '说说', href: '/moments' },
     { name: '留言墙', href: '/guestbook' },
