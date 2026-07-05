@@ -1,22 +1,93 @@
 import { NextResponse } from 'next/server';
 import { execFile, spawn } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+
+type CommentStatus = 'published' | 'deleted';
+
+type CommentImage = {
+  url: string;
+  thumbnailUrl?: string;
+  alt?: string;
+};
+
+type StoredComment = {
+  schema: 'sh-comment-v2';
+  id: string;
+  pageId: string;
+  parentId: string | null;
+  nickname: string;
+  emailHash: string | null;
+  websiteHash: string | null;
+  content: string;
+  images: CommentImage[];
+  status: CommentStatus;
+  ipHash: string;
+  userAgentHash: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
 const COMMENT_ADMIN_TOKEN = process.env.COMMENT_ADMIN_TOKEN || '';
+const HASH_SALT = process.env.COMMENT_HASH_SALT || `${OWNER}/${REPO}/site-comment`;
 const PRODUCTION_COMMENT_API = process.env.PRODUCTION_COMMENT_API || 'https://sh-zmd.vercel.app/api/comments';
-const COMMENT_COOLDOWN_MS = 15 * 1000;
-const lastCommentAt = new Map<string, number>();
+const COMMENT_WINDOW_MS = 60 * 1000;
+const COMMENT_LIMIT_PER_WINDOW = 3;
+const MAX_CONTENT_LENGTH = 2000;
+const MAX_NICKNAME_LENGTH = 32;
+const COMMENT_MARKER = 'sh-comment:v2';
+const requestWindows = new Map<string, number[]>();
 const execFileAsync = promisify(execFile);
 
 export const runtime = 'nodejs';
 
 function normalizePageId(pageId: string) {
-  return (pageId || '/').replace(/\s+/g, '-').slice(0, 80);
+  const clean = String(pageId || '/').trim().replace(/\s+/g, '-').slice(0, 140);
+  return clean || '/';
+}
+
+function normalizeNickname(value: unknown) {
+  return String(value || '').trim().replace(/\s+/g, ' ').slice(0, MAX_NICKNAME_LENGTH);
+}
+
+function normalizeContent(value: unknown) {
+  return String(value || '').replace(/\r\n/g, '\n').trim().slice(0, MAX_CONTENT_LENGTH);
+}
+
+function hashPrivate(value: string) {
+  const clean = value.trim();
+  if (!clean) return '';
+  return createHash('sha256').update(`${HASH_SALT}:${clean}`).digest('hex');
+}
+
+function getClientIp(req: Request) {
+  const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const realIp = req.headers.get('x-real-ip')?.trim();
+  return forwarded || realIp || 'local-client';
+}
+
+function getClientHashes(req: Request) {
+  return {
+    ipHash: hashPrivate(getClientIp(req)),
+    userAgentHash: hashPrivate(req.headers.get('user-agent') || 'unknown-agent'),
+  };
+}
+
+function isLocalRequest(req: Request) {
+  const url = new URL(req.url);
+  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host).toLowerCase();
+  return host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
+}
+
+function hasCommentAdminAccess(req: Request) {
+  if (isLocalRequest(req)) return true;
+  const providedToken = req.headers.get('x-comment-admin-token') || '';
+  return Boolean(COMMENT_ADMIN_TOKEN && providedToken === COMMENT_ADMIN_TOKEN);
 }
 
 function canProxyProductionComments(req: Request) {
@@ -32,37 +103,21 @@ function canProxyProductionComments(req: Request) {
   }
 }
 
-function isLocalRequest(req: Request) {
-  const url = new URL(req.url);
-  const host = (req.headers.get('x-forwarded-host') || req.headers.get('host') || url.host).toLowerCase();
-  return host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
-}
-
-function hasCommentAdminAccess(req: Request) {
-  if (isLocalRequest(req)) return true;
-  const providedToken = req.headers.get('x-comment-admin-token') || '';
-  return Boolean(COMMENT_ADMIN_TOKEN && providedToken === COMMENT_ADMIN_TOKEN);
-}
-
 function emptyCommentsResponse() {
   return NextResponse.json({ comments: [] });
 }
 
-function getClientKey(req: Request) {
-  const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const realIp = req.headers.get('x-real-ip')?.trim();
-  return forwarded || realIp || 'local-client';
-}
-
 function checkRateLimit(req: Request) {
-  const key = getClientKey(req);
+  const key = hashPrivate(getClientIp(req));
   const now = Date.now();
-  const previous = lastCommentAt.get(key) || 0;
-  const remainingMs = COMMENT_COOLDOWN_MS - (now - previous);
-  if (remainingMs > 0) {
-    return Math.ceil(remainingMs / 1000);
+  const previous = (requestWindows.get(key) || []).filter((time) => now - time < COMMENT_WINDOW_MS);
+  if (previous.length >= COMMENT_LIMIT_PER_WINDOW) {
+    requestWindows.set(key, previous);
+    const first = previous[0] || now;
+    return Math.max(1, Math.ceil((COMMENT_WINDOW_MS - (now - first)) / 1000));
   }
-  lastCommentAt.set(key, now);
+  previous.push(now);
+  requestWindows.set(key, previous);
   return 0;
 }
 
@@ -79,25 +134,22 @@ function repairMojibakeText(value: string) {
 }
 
 function repairCommentText<T>(value: T): T {
-  if (typeof value === 'string') {
-    return repairMojibakeText(value) as T;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => repairCommentText(item)) as T;
-  }
-
+  if (typeof value === 'string') return repairMojibakeText(value) as T;
+  if (Array.isArray(value)) return value.map((item) => repairCommentText(item)) as T;
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, repairCommentText(item)])
     ) as T;
   }
-
   return value;
 }
 
 function issueTitle(pageId: string) {
   return `[site-comment] ${normalizePageId(pageId)}`;
+}
+
+function pageIdFromIssueTitle(title: string) {
+  return title.replace(/^\[site-comment\]\s*/, '').trim() || '/';
 }
 
 function readGitCredential(input: string) {
@@ -151,15 +203,16 @@ async function getWriteToken() {
     const ghToken = stdout.trim();
     if (ghToken) return ghToken;
   } catch {
-    // GitHub CLI is optional; GitHub Desktop may still have a usable token in git-credential.
+    // GitHub CLI is optional.
   }
 
   try {
     const stdout = await readGitCredential('protocol=https\nhost=github.com\n\n');
-    const passwordLine = stdout
+    const credentialToken = stdout
       .split(/\r?\n/)
-      .find((line) => line.startsWith('password='));
-    const credentialToken = passwordLine?.replace(/^password=/, '').trim();
+      .find((line) => line.startsWith('password='))
+      ?.replace(/^password=/, '')
+      .trim();
     if (credentialToken) return credentialToken;
   } catch {
     // No saved GitHub credential available.
@@ -174,10 +227,7 @@ function githubHeaders(write = false, token = TOKEN) {
     'X-GitHub-Api-Version': '2022-11-28',
   };
 
-  if (write || token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
+  if (write || token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
 
@@ -190,88 +240,12 @@ async function findIssue(pageId: string) {
   });
 
   if (!res.ok) return null;
-
   const data = await res.json();
   return data.items?.find((item: any) => item.title === title) || null;
 }
 
-async function proxyProductionComments(req: Request, init?: RequestInit) {
-  if (!canProxyProductionComments(req)) {
-    if (!init?.method || init.method === 'GET') {
-      return emptyCommentsResponse();
-    }
-    return NextResponse.json(
-      { error: '线上留言接口不能代理到自身。请在 Vercel 配置 COMMENT_GITHUB_TOKEN 后再发送留言。' },
-      { status: 503 }
-    );
-  }
-
-  const incomingUrl = new URL(req.url);
-  const targetUrl = `${PRODUCTION_COMMENT_API}${incomingUrl.search || ''}`;
-
-  const fetchViaPowershell = async () => {
-    const script = [
-      "$ProgressPreference = 'SilentlyContinue'",
-      '$wc = New-Object System.Net.WebClient',
-      "$wc.Headers.Add('User-Agent', 'my-blog-manager')",
-      `$bytes = $wc.DownloadData(${JSON.stringify(targetUrl)})`,
-      '[Convert]::ToBase64String($bytes)',
-    ].join('; ');
-    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', script], {
-      windowsHide: true,
-      timeout: 60000,
-      maxBuffer: 1024 * 1024 * 4,
-    });
-    const data = JSON.parse(Buffer.from(stdout.trim(), 'base64').toString('utf-8') || '{}');
-    return NextResponse.json(repairCommentText(data));
-  };
-
-  if (!init?.method || init.method === 'GET') {
-    try {
-      return await fetchViaPowershell();
-    } catch {
-      // Fall back to Node fetch below.
-    }
-  }
-
-  try {
-    const res = await fetch(targetUrl, {
-      ...init,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(init?.headers || {}),
-      },
-      cache: 'no-store',
-    });
-    const data = await res.json().catch(() => ({}));
-    return NextResponse.json(repairCommentText(data), { status: res.status });
-  } catch (error) {
-    if (init?.method && init.method !== 'GET') throw error;
-    return fetchViaPowershell();
-  }
-}
-
-async function findCommentIssues() {
-  const query = encodeURIComponent(`repo:${OWNER}/${REPO} in:title "[site-comment]" type:issue`);
-  const res = await fetch(`https://api.github.com/search/issues?q=${query}&sort=updated&order=desc&per_page=30`, {
-    headers: githubHeaders(),
-    cache: 'no-store',
-  });
-
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || '读取留言提醒失败');
-  }
-
-  return Array.isArray(data.items)
-    ? data.items.filter((item: any) => typeof item.title === 'string' && item.title.startsWith('[site-comment] '))
-    : [];
-}
-
 async function createIssue(pageId: string, token = TOKEN) {
-  if (!token) {
-    throw new Error('留言功能还缺 COMMENT_GITHUB_TOKEN 环境变量。');
-  }
+  if (!token) throw new Error('评论功能缺少 COMMENT_GITHUB_TOKEN，暂时不能写入线上留言箱。');
 
   const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues`, {
     method: 'POST',
@@ -286,148 +260,327 @@ async function createIssue(pageId: string, token = TOKEN) {
   });
 
   const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || '创建留言箱失败');
-  }
-
+  if (!res.ok) throw new Error(data.message || '创建评论箱失败。');
   return data;
 }
 
-async function deleteGithubComment(commentId: string) {
-  const token = await getWriteToken();
-  if (!token) {
-    throw new Error('本地缺少 GitHub 删除权限。请先登录 GitHub CLI，或配置 COMMENT_GITHUB_TOKEN。');
-  }
-
-  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues/comments/${commentId}`, {
-    method: 'DELETE',
-    headers: githubHeaders(true, token),
-  });
-
-  if (res.status === 204) return;
-
-  const data = await res.json().catch(() => ({}));
-  throw new Error(data.message || '删除留言失败');
+function serializeMarker(value: unknown) {
+  return `<!-- ${COMMENT_MARKER}\n${JSON.stringify(value, null, 2)}\n-->`;
 }
 
-function parseComment(body: string) {
-  const match = body.match(/^访客：(.+?)\n\n([\s\S]*)$/);
-  if (!match) {
-    return { author: '路过的朋友', content: body, parentId: null };
+function parseMarker<T>(body: string): T | null {
+  const match = body.match(/<!--\s*sh-comment:v2\s*([\s\S]*?)\s*-->/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1]) as T;
+  } catch {
+    return null;
   }
+}
 
-  const meta = match[1].trim();
-  const parentMatch = meta.match(/\s\| parent:(.+)$/);
-  const author = parentMatch ? meta.replace(/\s\| parent:.+$/, '').trim() : meta;
+function imageMarkdown(images: CommentImage[]) {
+  return images
+    .map((image) => image.url)
+    .filter(Boolean)
+    .map((url) => `![评论图片](${url})`)
+    .join('\n\n');
+}
+
+function serializeComment(comment: StoredComment) {
+  const images = imageMarkdown(comment.images);
+  const visible = [
+    `访客：${comment.nickname}${comment.parentId ? ` | parent:${comment.parentId}` : ''}`,
+    '',
+    comment.status === 'deleted' ? '这条评论已被站长删除。' : comment.content,
+    comment.status === 'published' && images ? `\n${images}` : '',
+  ].join('\n').trim();
+
+  return `${serializeMarker(comment)}\n\n${visible}`;
+}
+
+function extractLegacyImages(content: string) {
+  const images: CommentImage[] = [];
+  const text = content.replace(/!\[[^\]]*]\(([^)]+)\)/g, (_, url: string) => {
+    images.push({ url: url.trim() });
+    return '';
+  }).trim();
+  return { text, images };
+}
+
+function parseLegacyComment(body: string, pageId: string, fallbackId: string, createdAt: string): StoredComment {
+  const repairedBody = repairMojibakeText(body || '');
+  const match = repairedBody.match(/^访客[:：]\s*(.+?)\n\n([\s\S]*)$/) || repairedBody.match(/^Visitor:\s*(.+?)\n\n([\s\S]*)$/);
+  const meta = (match?.[1] || '路过的朋友').trim();
+  const parentMatch = meta.match(/\s\|\s*parent:(.+)$/);
+  const nickname = parentMatch ? meta.replace(/\s\|\s*parent:.+$/, '').trim() : meta;
+  const rawContent = match?.[2]?.trim() || repairedBody.trim();
+  const { text, images } = extractLegacyImages(rawContent);
 
   return {
-    author: author || '路过的朋友',
-    content: match[2].trim(),
+    schema: 'sh-comment-v2',
+    id: fallbackId,
+    pageId,
     parentId: parentMatch?.[1]?.trim() || null,
+    nickname: nickname || '路过的朋友',
+    emailHash: null,
+    websiteHash: null,
+    content: text || rawContent,
+    images,
+    status: 'published',
+    ipHash: '',
+    userAgentHash: '',
+    createdAt,
+    updatedAt: createdAt,
   };
 }
 
-function pageIdFromIssueTitle(title: string) {
-  return title.replace(/^\[site-comment\]\s*/, '').trim() || '/';
+function normalizeStoredComment(value: Partial<StoredComment>, pageId: string, fallbackId: string, createdAt: string): StoredComment {
+  const rawStatus = String(value.status || 'published');
+  const status: CommentStatus = rawStatus === 'deleted' ? 'deleted' : 'published';
+  const images = Array.isArray(value.images)
+    ? value.images
+        .map((image: any) => typeof image === 'string' ? { url: image } : image)
+        .filter((image: any) => image?.url)
+        .map((image: any) => ({
+          url: String(image.url).trim(),
+          thumbnailUrl: image.thumbnailUrl ? String(image.thumbnailUrl).trim() : undefined,
+          alt: image.alt ? String(image.alt).slice(0, 80) : undefined,
+        }))
+        .slice(0, 3)
+    : [];
+
+  return {
+    schema: 'sh-comment-v2',
+    id: fallbackId,
+    pageId: normalizePageId(value.pageId || pageId),
+    parentId: value.parentId ? String(value.parentId).trim().slice(0, 80) : null,
+    nickname: normalizeNickname(value.nickname) || '路过的朋友',
+    emailHash: value.emailHash ? String(value.emailHash) : null,
+    websiteHash: value.websiteHash ? String(value.websiteHash) : null,
+    content: normalizeContent(value.content),
+    images,
+    status,
+    ipHash: value.ipHash ? String(value.ipHash) : '',
+    userAgentHash: value.userAgentHash ? String(value.userAgentHash) : '',
+    createdAt: value.createdAt || createdAt,
+    updatedAt: value.updatedAt || createdAt,
+  };
 }
 
-async function listRecentComments() {
+function parseCommentFromGithub(item: any, pageId: string): StoredComment {
+  const id = String(item.id || '');
+  const createdAt = item.created_at || new Date().toISOString();
+  const structured = parseMarker<StoredComment>(item.body || '');
+  if (structured) return repairCommentText(normalizeStoredComment(structured, pageId, id, createdAt));
+  return repairCommentText(parseLegacyComment(item.body || '', pageId, id, createdAt));
+}
+
+function publicComment(comment: StoredComment) {
+  return {
+    id: comment.id,
+    pageId: comment.pageId,
+    parentId: comment.parentId,
+    nickname: comment.nickname,
+    author: comment.nickname,
+    content: comment.content,
+    images: comment.images,
+    status: comment.status,
+    createdAt: comment.createdAt,
+    updatedAt: comment.updatedAt,
+  };
+}
+
+function adminComment(comment: StoredComment) {
+  return {
+    ...publicComment(comment),
+    emailHash: comment.emailHash,
+    websiteHash: comment.websiteHash,
+    ipHash: comment.ipHash,
+    userAgentHash: comment.userAgentHash,
+    pageUrl: comment.pageId.startsWith('/') ? comment.pageId : `/${comment.pageId}`,
+  };
+}
+
+async function fetchCommentsForIssue(issue: any, pageId: string) {
+  const res = await fetch(`${issue.comments_url}?per_page=100`, {
+    headers: githubHeaders(),
+    cache: 'no-store',
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '读取评论失败。');
+  return (Array.isArray(data) ? data : []).map((item) => parseCommentFromGithub(item, pageId));
+}
+
+async function findCommentIssues() {
+  const query = encodeURIComponent(`repo:${OWNER}/${REPO} in:title "[site-comment]" type:issue`);
+  const res = await fetch(`https://api.github.com/search/issues?q=${query}&sort=updated&order=desc&per_page=50`, {
+    headers: githubHeaders(),
+    cache: 'no-store',
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || '读取评论列表失败。');
+  return Array.isArray(data.items)
+    ? data.items.filter((item: any) => typeof item.title === 'string' && item.title.startsWith('[site-comment] '))
+    : [];
+}
+
+async function listRecentComments(admin = false) {
   const issues = await findCommentIssues();
   const groups = await Promise.all(
     issues.map(async (issue: any) => {
       if (!issue.comments_url || !issue.comments) return [];
-
-      const lastPage = Math.max(1, Math.ceil(Number(issue.comments || 0) / 20));
-      const res = await fetch(`${issue.comments_url}?per_page=20&page=${lastPage}`, {
-        headers: githubHeaders(),
-        cache: 'no-store',
-      });
-      const data = await res.json();
-      if (!res.ok || !Array.isArray(data)) return [];
-
       const pageId = pageIdFromIssueTitle(issue.title || '');
-      return data.map((item: any) => {
-        const parsed = parseComment(item.body || '');
-        return {
-          id: String(item.id),
-          pageId,
-          pageUrl: pageId.startsWith('/') ? pageId : `/${pageId}`,
-          author: repairMojibakeText(parsed.author),
-          content: repairMojibakeText(parsed.content),
-          parentId: parsed.parentId,
-          createdAt: item.created_at,
-        };
-      });
+      try {
+        return await fetchCommentsForIssue(issue, pageId);
+      } catch {
+        return [];
+      }
     })
   );
 
-  const comments = groups
+  const all = groups
     .flat()
-    .filter((comment: any) => comment.createdAt)
-    .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const visible = admin ? all : all.filter((comment) => comment.status === 'published');
 
   return {
-    total: comments.length,
-    latestAt: comments[0]?.createdAt || null,
-    comments: comments.slice(0, 30),
+    total: visible.length,
+    counts: {
+      published: all.filter((comment) => comment.status === 'published').length,
+      deleted: all.filter((comment) => comment.status === 'deleted').length,
+    },
+    latestAt: visible[0]?.createdAt || null,
+    comments: visible.slice(0, admin ? 120 : 30).map(admin ? adminComment : publicComment),
   };
+}
+
+async function proxyProductionComments(req: Request, init?: RequestInit) {
+  if (!canProxyProductionComments(req)) {
+    if (!init?.method || init.method === 'GET') return emptyCommentsResponse();
+    return NextResponse.json(
+      { error: '线上评论接口不能代理到自身。请在 Vercel 配置 COMMENT_GITHUB_TOKEN 后再提交评论。' },
+      { status: 503 }
+    );
+  }
+
+  const incomingUrl = new URL(req.url);
+  const targetUrl = `${PRODUCTION_COMMENT_API}${incomingUrl.search || ''}`;
+
+  try {
+    const res = await fetch(targetUrl, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers || {}),
+      },
+      cache: 'no-store',
+    });
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(repairCommentText(data), { status: res.status });
+  } catch (error) {
+    if (init?.method && init.method !== 'GET') throw error;
+
+    const script = [
+      "$ProgressPreference = 'SilentlyContinue'",
+      '$wc = New-Object System.Net.WebClient',
+      "$wc.Headers.Add('User-Agent', 'my-blog-manager')",
+      `$bytes = $wc.DownloadData(${JSON.stringify(targetUrl)})`,
+      '[Convert]::ToBase64String($bytes)',
+    ].join('; ');
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', script], {
+      windowsHide: true,
+      timeout: 60000,
+      maxBuffer: 1024 * 1024 * 4,
+    });
+    const data = JSON.parse(Buffer.from(stdout.trim(), 'base64').toString('utf-8') || '{}');
+    return NextResponse.json(repairCommentText(data));
+  }
+}
+
+async function getGithubComment(commentId: string) {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues/comments/${commentId}`, {
+    headers: githubHeaders(),
+    cache: 'no-store',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || '读取评论失败。');
+  return data;
+}
+
+async function patchGithubComment(commentId: string, comment: StoredComment, token: string) {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues/comments/${commentId}`, {
+    method: 'PATCH',
+    headers: {
+      ...githubHeaders(true, token),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ body: serializeComment(comment) }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || '更新评论失败。');
+  return data;
+}
+
+async function deleteGithubComment(commentId: string, token: string) {
+  const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/issues/comments/${commentId}`, {
+    method: 'DELETE',
+    headers: githubHeaders(true, token),
+  });
+  if (res.status === 204) return;
+  const data = await res.json().catch(() => ({}));
+  throw new Error(data.message || '删除评论失败。');
+}
+
+function parseImages(value: unknown): CommentImage[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .slice(0, 3)
+    .map((item) => typeof item === 'string' ? { url: item } : item)
+    .filter((item: any) => item?.url)
+    .map((item: any) => ({
+      url: String(item.url).trim().slice(0, 1000),
+      thumbnailUrl: item.thumbnailUrl ? String(item.thumbnailUrl).trim().slice(0, 1000) : undefined,
+      alt: item.alt ? String(item.alt).trim().slice(0, 80) : undefined,
+    }))
+    .filter((item) => /^https?:\/\//i.test(item.url) || item.url.startsWith('/comment-images/'));
 }
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const admin = searchParams.get('admin') === '1' && hasCommentAdminAccess(req);
+
     if (searchParams.get('summary') === '1') {
       try {
-        const localSummary = await listRecentComments();
-        if (localSummary.total > 0) {
-          return NextResponse.json(localSummary);
-        }
+        const localSummary = await listRecentComments(admin);
+        if (localSummary.total > 0 || admin) return NextResponse.json(localSummary);
         if (canProxyProductionComments(req)) return proxyProductionComments(req);
         return NextResponse.json(localSummary);
       } catch {
         if (canProxyProductionComments(req)) return proxyProductionComments(req);
-        return NextResponse.json({ total: 0, latestAt: null, comments: [] });
+        return NextResponse.json({ total: 0, latestAt: null, comments: [], counts: { published: 0, deleted: 0 } });
       }
     }
 
     const pageId = normalizePageId(searchParams.get('pageId') || '/');
     const issue = await findIssue(pageId);
-
     if (!issue) {
       if (canProxyProductionComments(req)) return proxyProductionComments(req);
       return emptyCommentsResponse();
     }
 
-    const res = await fetch(issue.comments_url, {
-      headers: githubHeaders(),
-      cache: 'no-store',
-    });
-    const data = await res.json();
+    const comments = await fetchCommentsForIssue(issue, pageId);
+    const visible = admin ? comments : comments.filter((comment) => comment.status === 'published');
+    const mapped = visible
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map(admin ? adminComment : publicComment);
 
-    if (!res.ok) {
-      throw new Error(data.message || '读取留言失败');
-    }
-
-    const comments = (Array.isArray(data) ? data : []).map((item: any) => {
-      const parsed = parseComment(item.body || '');
-      return {
-        id: String(item.id),
-        author: repairMojibakeText(parsed.author),
-        content: repairMojibakeText(parsed.content),
-        parentId: parsed.parentId,
-        createdAt: item.created_at,
-      };
-    }).reverse();
-
-    if (comments.length === 0) {
-      if (canProxyProductionComments(req)) return proxyProductionComments(req);
-      return emptyCommentsResponse();
-    }
-
-    return NextResponse.json({ comments });
+    if (mapped.length === 0 && !admin && canProxyProductionComments(req)) return proxyProductionComments(req);
+    return NextResponse.json({ comments: mapped });
   } catch (error: any) {
     if (canProxyProductionComments(req)) return proxyProductionComments(req);
-    return NextResponse.json({ error: error.message || '读取留言失败' }, { status: 502 });
+    return NextResponse.json({ error: error.message || '读取评论失败。' }, { status: 502 });
   }
 }
 
@@ -435,24 +588,46 @@ export async function POST(req: Request) {
   try {
     const bodyText = await req.text();
     const body = JSON.parse(bodyText || '{}');
-    const pageId = normalizePageId(body.pageId || '/');
-    const author = String(body.author || '路过的朋友').trim().slice(0, 40) || '路过的朋友';
-    const content = String(body.content || '').trim().slice(0, 2000);
-    const parentId = body.parentId ? String(body.parentId).trim().slice(0, 80) : '';
-
-    if (!content) {
-      return NextResponse.json({ error: '留言内容不能为空。' }, { status: 400 });
+    const honeypot = String(body.company || body.websiteConfirm || body.trap || '').trim();
+    if (honeypot) {
+      return NextResponse.json({ error: '评论提交失败，请刷新后再试。' }, { status: 400 });
     }
 
-    const writeToken = await getWriteToken();
-    if (!writeToken) {
-      return proxyProductionComments(req, { method: 'POST', body: bodyText });
-    }
+    const pageId = normalizePageId(body.pageId || body.postId || body.categoryId || '/');
+    const nickname = normalizeNickname(body.nickname ?? body.author);
+    const content = normalizeContent(body.content);
+    const parentId = body.parentId ? String(body.parentId).trim().slice(0, 80) : null;
+    const images = parseImages(body.images);
+
+    if (!nickname) return NextResponse.json({ error: '请先填写昵称。' }, { status: 400 });
+    if (!content) return NextResponse.json({ error: '评论内容不能为空。' }, { status: 400 });
 
     const remaining = checkRateLimit(req);
     if (remaining > 0) {
-      return NextResponse.json({ error: `发消息太快啦，请等待 ${remaining}s 后再发送（至少间隔 15s）。` }, { status: 429 });
+      return NextResponse.json({ error: `发送太快了，请 ${remaining}s 后再试。同一访客 1 分钟最多 3 条。` }, { status: 429 });
     }
+
+    const writeToken = await getWriteToken();
+    if (!writeToken) return proxyProductionComments(req, { method: 'POST', body: bodyText });
+
+    const hashes = getClientHashes(req);
+    const now = new Date().toISOString();
+    const draft: StoredComment = {
+      schema: 'sh-comment-v2',
+      id: `draft_${Date.now()}`,
+      pageId,
+      parentId,
+      nickname,
+      emailHash: body.email ? hashPrivate(String(body.email).toLowerCase()) : null,
+      websiteHash: body.website ? hashPrivate(String(body.website).toLowerCase()) : null,
+      content,
+      images,
+      status: 'published',
+      ipHash: hashes.ipHash,
+      userAgentHash: hashes.userAgentHash,
+      createdAt: now,
+      updatedAt: now,
+    };
 
     const issue = await findIssue(pageId) || await createIssue(pageId, writeToken);
     const res = await fetch(issue.comments_url, {
@@ -461,47 +636,92 @@ export async function POST(req: Request) {
         ...githubHeaders(true, writeToken),
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        body: `访客：${author}${parentId ? ` | parent:${parentId}` : ''}\n\n${content}`,
-      }),
+      body: JSON.stringify({ body: serializeComment(draft) }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      return proxyProductionComments(req, { method: 'POST', body: bodyText });
-    }
+    if (!res.ok) return proxyProductionComments(req, { method: 'POST', body: bodyText });
+
+    const saved = {
+      ...draft,
+      id: String(data.id),
+      createdAt: data.created_at || draft.createdAt,
+      updatedAt: data.created_at || draft.updatedAt,
+    };
+    patchGithubComment(saved.id, saved, writeToken).catch(() => undefined);
 
     return NextResponse.json({
-      comment: {
-        id: String(data.id),
-        author,
-        content,
-        parentId: parentId || null,
-        createdAt: data.created_at,
-      },
+      success: true,
+      status: saved.status,
+      message: '评论已发布。',
+      comment: publicComment(saved),
     });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || '发送留言失败' }, { status: 500 });
+    return NextResponse.json({ error: error.message || '提交评论失败。' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  try {
+    if (!hasCommentAdminAccess(req)) {
+      return NextResponse.json({ error: '只有本地后台可以管理评论。' }, { status: 403 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const commentId = String(body.commentId || '').trim();
+    const status = String(body.status || '').trim() as CommentStatus;
+    if (!/^\d+$/.test(commentId)) return NextResponse.json({ error: '评论 ID 不正确。' }, { status: 400 });
+    if (!['published', 'deleted'].includes(status)) return NextResponse.json({ error: '评论状态不正确。' }, { status: 400 });
+
+    const token = await getWriteToken();
+    if (!token) throw new Error('本地缺少 GitHub 写入权限，请先登录 GitHub CLI 或配置 COMMENT_GITHUB_TOKEN。');
+
+    const githubComment = await getGithubComment(commentId);
+    const parsed = parseCommentFromGithub(githubComment, normalizePageId(body.pageId || '/'));
+    const nextComment: StoredComment = {
+      ...parsed,
+      id: commentId,
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+    await patchGithubComment(commentId, nextComment, token);
+    return NextResponse.json({ success: true, comment: adminComment(nextComment) });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || '管理评论失败。' }, { status: 500 });
   }
 }
 
 export async function DELETE(req: Request) {
   try {
     if (!hasCommentAdminAccess(req)) {
-      return NextResponse.json({ error: '删除留言只允许本地客户端或管理员接口调用。' }, { status: 403 });
+      return NextResponse.json({ error: '只有本地后台可以删除评论。' }, { status: 403 });
     }
 
     const body = await req.json().catch(() => ({}));
     const url = new URL(req.url);
     const commentId = String(body.commentId || url.searchParams.get('commentId') || '').trim();
+    const hard = body.hard === true || url.searchParams.get('hard') === '1';
+    if (!/^\d+$/.test(commentId)) return NextResponse.json({ error: '评论 ID 不正确。' }, { status: 400 });
 
-    if (!/^\d+$/.test(commentId)) {
-      return NextResponse.json({ error: '留言 ID 不正确。' }, { status: 400 });
+    const token = await getWriteToken();
+    if (!token) throw new Error('本地缺少 GitHub 删除权限，请先登录 GitHub CLI 或配置 COMMENT_GITHUB_TOKEN。');
+
+    if (hard) {
+      await deleteGithubComment(commentId, token);
+      return NextResponse.json({ success: true, hardDeleted: true });
     }
 
-    await deleteGithubComment(commentId);
-    return NextResponse.json({ success: true });
+    const githubComment = await getGithubComment(commentId);
+    const parsed = parseCommentFromGithub(githubComment, normalizePageId(body.pageId || '/'));
+    const nextComment: StoredComment = {
+      ...parsed,
+      id: commentId,
+      status: 'deleted',
+      updatedAt: new Date().toISOString(),
+    };
+    await patchGithubComment(commentId, nextComment, token);
+    return NextResponse.json({ success: true, comment: adminComment(nextComment) });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || '删除留言失败' }, { status: 500 });
+    return NextResponse.json({ error: error.message || '删除评论失败。' }, { status: 500 });
   }
 }

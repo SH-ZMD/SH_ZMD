@@ -3,6 +3,7 @@ import path from 'path';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import ArchiveCollectionsClient from '../../components/ArchiveCollectionsClient';
+import Comments from '../../components/Comments';
 
 function readArchiveCollections() {
   try {
@@ -21,7 +22,12 @@ export default function Timeline() {
     <div className="min-h-screen relative pb-32">
       <Navbar />
       <PageTransition>
-        <ArchiveCollectionsClient initialCollections={collections} />
+        <>
+          <ArchiveCollectionsClient initialCollections={collections} />
+          <main className="w-[95%] max-w-5xl mx-auto relative z-10">
+            <Comments pageId="/timeline" />
+          </main>
+        </>
       </PageTransition>
     </div>
   );

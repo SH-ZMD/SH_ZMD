@@ -2,6 +2,7 @@
 import path from 'path';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
+import Comments from '../../components/Comments';
 import { siteConfig } from '../../siteConfig';
 
 export const dynamic = 'force-dynamic';
@@ -104,6 +105,7 @@ export default function RecommendationsPage() {
               ))}
             </div>
           </section>
+          <Comments pageId="/recommendations" />
         </main>
       </PageTransition>
     </div>

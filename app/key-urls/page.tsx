@@ -1,6 +1,7 @@
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import KeyUrlPublicTable from '../../components/KeyUrlPublicTable';
+import Comments from '../../components/Comments';
 import { siteConfig } from '../../siteConfig';
 
 export const metadata = {
@@ -13,7 +14,12 @@ export default function KeyUrlsPage() {
     <div className="min-h-screen relative pb-10">
       <Navbar />
       <PageTransition>
-        <KeyUrlPublicTable />
+        <>
+          <KeyUrlPublicTable />
+          <main className="w-[95%] max-w-5xl mx-auto relative z-10">
+            <Comments pageId="/key-urls" />
+          </main>
+        </>
       </PageTransition>
     </div>
   );

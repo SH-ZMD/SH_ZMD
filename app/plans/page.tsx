@@ -2,10 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
+import Comments from '../../components/Comments';
 import { siteConfig } from '../../siteConfig';
 
 type PlanStatus = 'todo' | 'doing' | 'done' | 'paused';
 type PlanPriority = 'low' | 'medium' | 'high';
+
 type PlanItem = {
   id: string;
   title: string;
@@ -32,7 +34,7 @@ const priorityMeta: Record<PlanPriority, string> = {
 
 export const metadata = {
   title: `计划表 | ${siteConfig.title}`,
-  description: '未来计划、学习路线与待办目标',
+  description: '未来计划、学习路线与待办目标。',
 };
 
 function readPlans(): PlanItem[] {
@@ -85,6 +87,7 @@ export default function PlansPage() {
               })}
             </div>
           </section>
+          <Comments pageId="/plans" />
         </main>
       </PageTransition>
     </div>

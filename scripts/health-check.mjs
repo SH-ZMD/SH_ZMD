@@ -13,6 +13,8 @@ const criticalTextFiles = [
   'components/Navbar.tsx',
   'components/Navbar.public.tsx',
   'components/KeyUrlPublicTable.tsx',
+  'components/Comments.tsx',
+  'components/settings/CommentSection.tsx',
   'components/settings/LifeModulesSection.tsx',
   'app/settings/page.tsx',
   'app/photowall/page.public.tsx',
@@ -22,6 +24,8 @@ const criticalTextFiles = [
   'cms_core/api/sync.py',
   'cms_core/api/key_url_tables.py',
   'cms_core/api/drafts.py',
+  'app/api/comments/route.ts',
+  'app/api/comment-images/route.ts',
 ];
 
 const mojibakePatterns = [
@@ -116,6 +120,27 @@ const interfaceChecks = [
     file: 'components/KeyUrlPublicTable.tsx',
     required: ['中转站', 'key-url-tables.json'],
     forbidden: ['复制 Key', '显示 Key'],
+  },
+  {
+    file: 'components/Comments.tsx',
+    required: ['评论区', '昵称 *', '邮箱（可选，不公开）', '单条评论最多'],
+    forbidden: ['待审核', '审核通过', 'SH_ZMD'],
+  },
+  {
+    file: 'components/settings/CommentSection.tsx',
+    required: ['评论和回复会直接发布', '删除', '恢复'],
+    forbidden: ['待审核', '审核通过', '垃圾评论', 'SH_ZMD'],
+    managerOnly: true,
+  },
+  {
+    file: 'app/api/comments/route.ts',
+    required: ['COMMENT_LIMIT_PER_WINDOW', "status: 'published'", 'COMMENT_MARKER'],
+    forbidden: ['pending', 'spam', '这个昵称只允许'],
+  },
+  {
+    file: 'app/api/comment-images/route.ts',
+    required: ['releases', '不会触发 Vercel', 'MAX_COMMENT_IMAGE_SIZE'],
+    forbidden: ['public/comment-images', 'contents/'],
   },
 ];
 
@@ -259,6 +284,7 @@ for (const file of criticalTextFiles) {
 }
 
 for (const check of interfaceChecks) {
+  if (check.managerOnly && !isManagerSource) continue;
   const fullPath = path.join(root, check.file);
   if (!fs.existsSync(fullPath)) {
     failures.push(`${check.file} is missing`);

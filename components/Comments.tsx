@@ -2,13 +2,25 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { ImagePlus, Loader2, MessageSquareText, Reply, Send, X } from 'lucide-react';
+
+type CommentImage = {
+  url: string;
+  thumbnailUrl?: string;
+  alt?: string;
+};
 
 type CommentItem = {
   id: string;
-  author: string;
-  content: string;
-  createdAt: string;
+  pageId?: string;
   parentId?: string | null;
+  nickname?: string;
+  author?: string;
+  content: string;
+  images?: CommentImage[];
+  status?: 'published' | 'deleted';
+  createdAt: string;
+  updatedAt?: string;
 };
 
 type CommentsProps = {
@@ -18,8 +30,10 @@ type CommentsProps = {
 };
 
 const PRODUCTION_COMMENT_API = 'https://sh-zmd.vercel.app/api/comments';
-const MAX_COMMENT_IMAGE_SIZE = 10 * 1024 * 1024;
-const COMMENT_COOLDOWN_MS = 15 * 1000;
+const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024;
+const MAX_COMMENT_IMAGES = 3;
+const MAX_CONTENT_LENGTH = 2000;
+const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 async function readJsonSafely(res: Response) {
   const text = await res.text();
@@ -34,67 +48,69 @@ async function readJsonSafely(res: Response) {
 async function fetchProductionComments(pageId: string) {
   const remoteRes = await fetch(`${PRODUCTION_COMMENT_API}?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
   const remoteData = await readJsonSafely(remoteRes);
-  if (remoteRes.ok && Array.isArray(remoteData.comments)) return remoteData.comments;
+  if (remoteRes.ok && Array.isArray(remoteData.comments)) return remoteData.comments as CommentItem[];
   return [];
 }
 
 async function uploadCommentImage(file: File) {
-  if (file.size > MAX_COMMENT_IMAGE_SIZE) {
-    throw new Error('图片不能超过 10MB，请压缩后再上传。');
+  if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    throw new Error('只支持 jpg、png、webp、gif 图片。');
   }
+  if (file.size > MAX_COMMENT_IMAGE_SIZE) {
+    throw new Error('单张图片不能超过 5MB，请压缩后再上传。');
+  }
+
   const formData = new FormData();
   formData.append('file', file);
   const res = await fetch('/api/comment-images', { method: 'POST', body: formData });
   const data = await readJsonSafely(res);
-  if (!res.ok || !data.url) throw new Error(data.error || '图片上传失败');
-  return data.url as string;
+  if (!res.ok || !data.url) throw new Error(data.error || '图片上传失败。');
+  return {
+    url: String(data.url),
+    thumbnailUrl: data.thumbnailUrl ? String(data.thumbnailUrl) : String(data.url),
+    alt: file.name || '评论图片',
+  };
 }
 
-function withImages(content: string, imageUrls: string[]) {
-  const cleanContent = content.trim();
-  const cleanUrls = imageUrls.map((url) => url.trim()).filter(Boolean);
-  if (cleanUrls.length === 0) return cleanContent;
-  const images = cleanUrls.map((url) => `![留言图片](${url})`).join('\n\n');
-  return `${cleanContent}${cleanContent ? '\n\n' : ''}${images}`;
+function authorName(comment: CommentItem) {
+  return comment.nickname || comment.author || '路过的朋友';
 }
 
-function renderCommentContent(content: string) {
-  const parts = String(content || '').split(/(!\[[^\]]*\]\([^)]+\))/g);
-  return parts.map((part, index) => {
-    const imageMatch = part.match(/^!\[[^\]]*\]\(([^)]+)\)$/);
-    if (imageMatch) {
-      return (
-        <img
-          key={index}
-          src={imageMatch[1]}
-          alt="留言图片"
-          className="mt-3 max-h-80 w-auto max-w-full rounded-2xl border border-white/30 object-contain"
-        />
-      );
-    }
-    if (!part) return null;
+function avatarText(name: string) {
+  return (name.trim().slice(0, 1) || '留').toUpperCase();
+}
 
-    return part.split('\n').map((line, lineIndex) => {
-      const quoteMatch = line.match(/^\s*[>＞]\s?(.*)$/);
-      if (quoteMatch) {
-        return (
-          <span
-            key={`${index}-${lineIndex}`}
-            className="my-2 block border-l-4 border-indigo-400/70 bg-indigo-500/10 px-3 py-2 text-slate-600 dark:text-slate-300"
-          >
-            {quoteMatch[1] || ' '}
-          </span>
-        );
-      }
-
-      return (
-        <span key={`${index}-${lineIndex}`} className="whitespace-pre-wrap">
-          {line}
-          {lineIndex < part.split('\n').length - 1 ? '\n' : ''}
-        </span>
-      );
+function formatDate(value: string) {
+  try {
+    return new Date(value).toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     });
-  });
+  } catch {
+    return value;
+  }
+}
+
+function splitMarkdownImages(content: string) {
+  const images: CommentImage[] = [];
+  const text = String(content || '').replace(/!\[[^\]]*]\(([^)]+)\)/g, (_, url: string) => {
+    images.push({ url: url.trim(), thumbnailUrl: url.trim(), alt: '评论图片' });
+    return '';
+  }).trim();
+  return { text, images };
+}
+
+function getDisplayContent(comment: CommentItem) {
+  return splitMarkdownImages(comment.content).text || comment.content;
+}
+
+function getDisplayImages(comment: CommentItem) {
+  const structured = Array.isArray(comment.images) ? comment.images.filter((item) => item?.url) : [];
+  if (structured.length > 0) return structured;
+  return splitMarkdownImages(comment.content).images;
 }
 
 export default function Comments({ pageId: explicitPageId, compact = false, className = '' }: CommentsProps = {}) {
@@ -102,27 +118,31 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
   const routePageId = useMemo(() => pathname.replace(/\/$/, '') || '/', [pathname]);
   const pageId = useMemo(() => (explicitPageId || routePageId).replace(/\/$/, '') || '/', [explicitPageId, routePageId]);
   const [comments, setComments] = useState<CommentItem[]>([]);
-  const [author, setAuthor] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
   const [content, setContent] = useState('');
-  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [honeypot, setHoneypot] = useState('');
+  const [imageUrls, setImageUrls] = useState<CommentImage[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState('');
-  const [lastSubmitAt, setLastSubmitAt] = useState(0);
   const [replyTarget, setReplyTarget] = useState<CommentItem | null>(null);
   const [replyContent, setReplyContent] = useState('');
+  const [previewImage, setPreviewImage] = useState<CommentImage | null>(null);
 
-  const rootComments = useMemo(() => comments.filter((comment) => !comment.parentId), [comments]);
+  const publishedComments = useMemo(() => comments.filter((comment) => comment.status !== 'deleted'), [comments]);
+  const rootComments = useMemo(() => publishedComments.filter((comment) => !comment.parentId), [publishedComments]);
   const repliesByParent = useMemo(() => {
     const groups: Record<string, CommentItem[]> = {};
-    for (const comment of comments) {
+    for (const comment of publishedComments) {
       if (!comment.parentId) continue;
       groups[comment.parentId] = groups[comment.parentId] || [];
       groups[comment.parentId].push(comment);
     }
     return groups;
-  }, [comments]);
+  }, [publishedComments]);
 
   const loadComments = async () => {
     setLoading(true);
@@ -130,7 +150,7 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
     try {
       const res = await fetch(`/api/comments?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
       const data = await readJsonSafely(res);
-      if (!res.ok) throw new Error(data.error || '留言读取失败');
+      if (!res.ok) throw new Error(data.error || '评论读取失败。');
       if (Array.isArray(data.comments)) {
         setComments(data.comments);
         return;
@@ -140,7 +160,7 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
       try {
         setComments(await fetchProductionComments(pageId));
       } catch {
-        setMessage('留言读取失败');
+        setMessage('评论读取失败。');
       }
     } finally {
       setLoading(false);
@@ -151,55 +171,40 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
     loadComments();
   }, [pageId]);
 
-  const submitComment = async (parentId?: string) => {
-    const elapsed = Date.now() - lastSubmitAt;
-    if (elapsed < COMMENT_COOLDOWN_MS) {
-      const remaining = Math.ceil((COMMENT_COOLDOWN_MS - elapsed) / 1000);
-      setMessage(`发消息太快啦，请等待 ${remaining}s 后再发送（至少间隔 15s）。`);
+  const removeImage = (index: number) => {
+    setImageUrls((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const handleImageFiles = async (files?: FileList | File[]) => {
+    const selectedFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
+    if (selectedFiles.length === 0) return;
+    if (imageUrls.length + selectedFiles.length > MAX_COMMENT_IMAGES) {
+      setMessage(`单条评论最多 ${MAX_COMMENT_IMAGES} 张图。`);
       return;
     }
 
-    const cleanAuthor = author.trim() || '路过的朋友';
-    const cleanContent = parentId ? replyContent.trim() : withImages(content, imageUrls);
-    if (!cleanContent) {
-      setMessage('先写点内容再发送吧。');
+    const invalid = selectedFiles.find((file) => !ALLOWED_IMAGE_TYPES.has(file.type));
+    if (invalid) {
+      setMessage(`${invalid.name} 格式不支持，只支持 jpg、png、webp、gif。`);
       return;
     }
 
-    setSubmitting(true);
-    setMessage('');
+    const oversized = selectedFiles.find((file) => file.size > MAX_COMMENT_IMAGE_SIZE);
+    if (oversized) {
+      setMessage(`${oversized.name} 超过 5MB，请压缩后再上传。`);
+      return;
+    }
+
+    setUploadingImage(true);
+    setMessage('正在上传图片...');
     try {
-      const payload = { pageId, author: cleanAuthor, content: cleanContent, parentId };
-      const res = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      let data = await readJsonSafely(res);
-      if (!res.ok) {
-        if (res.status === 429) {
-          throw new Error(data.error || '发消息太快啦，请等待 15s 后再发送。');
-        }
-        const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        data = await readJsonSafely(remoteRes);
-        if (!remoteRes.ok) throw new Error(data.error || '发送失败');
-      }
-      setContent('');
-      setImageUrls([]);
-      setReplyContent('');
-      setReplyTarget(null);
-      setAuthor('');
-      setComments((prev) => [data.comment, ...prev].filter(Boolean));
-      setLastSubmitAt(Date.now());
-      setMessage('留言已送达。');
+      const uploaded = await Promise.all(selectedFiles.map((file) => uploadCommentImage(file)));
+      setImageUrls((prev) => [...prev, ...uploaded].slice(0, MAX_COMMENT_IMAGES));
+      setMessage(`已加入 ${uploaded.length} 张图片，发布后会一起显示。`);
     } catch (error: any) {
-      setMessage(error.message || '发送失败');
+      setMessage(error.message || '图片上传失败。');
     } finally {
-      setSubmitting(false);
+      setUploadingImage(false);
     }
   };
 
@@ -208,191 +213,320 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
     if (!imageItem) return;
     const file = imageItem.getAsFile();
     if (!file) return;
-    if (file.size > MAX_COMMENT_IMAGE_SIZE) {
-      event.preventDefault();
-      setMessage('图片不能超过 10MB，请压缩后再上传。');
+    event.preventDefault();
+    handleImageFiles([file]);
+  };
+
+  const submitComment = async (parentId?: string) => {
+    const cleanNickname = nickname.trim();
+    const cleanContent = parentId ? replyContent.trim() : content.trim();
+
+    if (!cleanNickname) {
+      setMessage('请先填写昵称。');
+      return;
+    }
+    if (!cleanContent) {
+      setMessage(parentId ? '回复内容不能为空。' : '评论内容不能为空。');
       return;
     }
 
-    event.preventDefault();
-    setUploadingImage(true);
-    setMessage('正在导入粘贴的图片...');
+    setSubmitting(true);
+    setMessage('');
     try {
-      const url = await uploadCommentImage(file);
-      setImageUrls((prev) => [...prev, url]);
-      setMessage('图片已导入，发送留言后会一起显示。');
+      const payload = {
+        pageId,
+        parentId: parentId || null,
+        nickname: cleanNickname,
+        email,
+        website,
+        content: cleanContent,
+        images: parentId ? [] : imageUrls,
+        company: honeypot,
+      };
+      const res = await fetch('/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      let data = await readJsonSafely(res);
+      if (!res.ok) {
+        const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        data = await readJsonSafely(remoteRes);
+        if (!remoteRes.ok) throw new Error(data.error || '发送失败。');
+      }
+
+      if (data.comment) {
+        setComments((prev) => [data.comment, ...prev].filter(Boolean));
+      } else {
+        await loadComments();
+      }
+      if (parentId) {
+        setReplyContent('');
+        setReplyTarget(null);
+      } else {
+        setContent('');
+        setImageUrls([]);
+      }
+      setMessage(data.message || '评论已发布。');
     } catch (error: any) {
-      setMessage(error.message || '图片导入失败');
+      setMessage(error.message || '发送失败。');
     } finally {
-      setUploadingImage(false);
+      setSubmitting(false);
     }
   };
 
-  const handleImageFiles = async (files?: FileList | File[]) => {
-    const selectedFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
-    if (selectedFiles.length === 0) return;
-    const oversized = selectedFiles.find((file) => file.size > MAX_COMMENT_IMAGE_SIZE);
-    if (oversized) {
-      setMessage(`图片不能超过 10MB：${oversized.name} 太大，请压缩后再上传。`);
-      return;
-    }
-
-    setUploadingImage(true);
-    setMessage('正在上传图片...');
-    try {
-      const urls = await Promise.all(selectedFiles.map((file) => uploadCommentImage(file)));
-      setImageUrls((prev) => [...prev, ...urls]);
-      setMessage(`已插入 ${urls.length} 张图片，发送留言后会一起显示。`);
-    } catch (error: any) {
-      setMessage(error.message || '图片上传失败');
-    } finally {
-      setUploadingImage(false);
-    }
+  const renderImages = (images: CommentImage[], small = false) => {
+    if (!images.length) return null;
+    return (
+      <div className={`mt-3 grid gap-2 ${small ? 'grid-cols-3' : 'grid-cols-2 sm:grid-cols-3'}`}>
+        {images.map((image, index) => (
+          <button
+            type="button"
+            key={`${image.url}-${index}`}
+            onClick={() => setPreviewImage(image)}
+            className={`${small ? 'h-20' : 'h-28 sm:h-32'} overflow-hidden rounded-2xl border border-white/15 bg-white/5 transition hover:-translate-y-0.5 hover:border-indigo-300/60`}
+          >
+            <img src={image.thumbnailUrl || image.url} alt={image.alt || '评论图片'} className="h-full w-full object-cover" />
+          </button>
+        ))}
+      </div>
+    );
   };
 
   return (
-    <div className={`w-full ${compact ? 'mt-4' : 'mt-12'} relative ${className}`}>
-      <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-indigo-500/10 dark:bg-indigo-500/20 blur-3xl rounded-full pointer-events-none z-0" />
-
-      <div className="relative z-10 pt-6 border-t border-slate-200/50 dark:border-slate-700/50">
-        <div className="grid grid-cols-1 gap-4">
-          <input
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
-            placeholder="昵称（可不填）"
-            className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-          />
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onPaste={handlePasteImage}
-            placeholder="不用登录 GitHub，直接写留言就行。"
-            rows={4}
-            className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none resize-y focus:ring-2 focus:ring-indigo-500/50"
-          />
-          <div className="flex flex-col gap-3 rounded-2xl border border-white/35 bg-white/20 p-3 dark:border-slate-700/60 dark:bg-slate-950/20">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-indigo-500 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-600">
-                {uploadingImage ? '上传中...' : '插入图片'}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="hidden"
-                  onChange={(event) => {
-                    handleImageFiles(event.target.files || undefined);
-                    event.currentTarget.value = '';
-                  }}
-                />
-              </label>
-              {imageUrls.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setImageUrls([])}
-                  className="rounded-2xl border border-white/40 px-4 py-2.5 text-xs font-bold text-slate-500 transition hover:text-slate-800 dark:text-slate-300 dark:hover:text-white"
-                >
-                  移除全部图片
-                </button>
-              )}
+    <section className={`w-full ${compact ? 'mt-5' : 'mt-12'} ${className}`}>
+      <div className="overflow-hidden rounded-[28px] border border-white/15 bg-[oklch(25.7%_0.054_259.7/0.72)] text-white shadow-2xl shadow-slate-950/30 backdrop-blur-2xl">
+        <div className="border-b border-white/10 bg-white/[0.04] px-5 py-5 md:px-7">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-400">MESSAGE BOARD</p>
+              <h2 className={`${compact ? 'text-2xl' : 'text-3xl md:text-4xl'} mt-2 font-black tracking-tight`}>评论区</h2>
+              {!compact && <p className="mt-2 text-sm leading-6 text-slate-300">不用登录，填昵称就能评论；图片会作为附件保存，邮箱和网站不会公开展示。</p>}
             </div>
-            {imageUrls.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {imageUrls.map((url, index) => (
-                  <div key={`${url}-${index}`} className="relative">
-                    <img src={url} alt="待发送图片" className="h-32 w-full rounded-2xl border border-white/30 object-cover" />
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-slate-950/25 px-4 py-2 text-xs font-bold text-slate-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.85)]" />
+              {publishedComments.length} 条评论
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-5 p-4 md:p-6">
+          <div className="rounded-[24px] border border-indigo-400/25 bg-slate-950/35 p-4 shadow-inner shadow-indigo-950/20">
+            <div className="mb-3 flex flex-col gap-3 md:flex-row">
+              <input
+                value={nickname}
+                onChange={(event) => setNickname(event.target.value)}
+                maxLength={32}
+                placeholder="昵称 *"
+                className="h-12 flex-1 rounded-2xl border border-white/10 bg-slate-950/55 px-4 text-sm font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/15"
+              />
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="邮箱（可选，不公开）"
+                className="h-12 flex-1 rounded-2xl border border-white/10 bg-slate-950/55 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/15"
+              />
+              <input
+                value={website}
+                onChange={(event) => setWebsite(event.target.value)}
+                placeholder="网站（可选，不公开）"
+                className="h-12 flex-1 rounded-2xl border border-white/10 bg-slate-950/55 px-4 text-sm text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/15"
+              />
+              <input
+                value={honeypot}
+                onChange={(event) => setHoneypot(event.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="pointer-events-none absolute left-[-10000px] top-auto h-0 w-0 opacity-0"
+              />
+            </div>
+
+            <textarea
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              onPaste={handlePasteImage}
+              onKeyDown={(event) => {
+                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') submitComment();
+              }}
+              maxLength={MAX_CONTENT_LENGTH}
+              placeholder="把想说的话留在这里..."
+              rows={4}
+              className="min-h-32 w-full resize-y rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-3 text-sm leading-7 text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/15"
+            />
+
+            {imageUrls.length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {imageUrls.map((image, index) => (
+                  <div key={`${image.url}-${index}`} className="relative h-28 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                    <img src={image.thumbnailUrl || image.url} alt={image.alt || '待发布图片'} className="h-full w-full object-cover" />
                     <button
                       type="button"
-                      onClick={() => setImageUrls((prev) => prev.filter((_, itemIndex) => itemIndex !== index))}
-                      className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-black text-white backdrop-blur"
+                      onClick={() => removeImage(index)}
+                      className="absolute right-2 top-2 grid h-7 w-7 place-items-center rounded-full bg-slate-950/70 text-white backdrop-blur transition hover:bg-rose-500"
+                      aria-label="移除图片"
                     >
-                      移除
+                      <X size={14} />
                     </button>
                   </div>
                 ))}
               </div>
-            ) : (
-              <input
-                onChange={(e) => setImageUrls(e.target.value.trim() ? [e.target.value.trim()] : [])}
-                placeholder="也可以粘贴图片链接"
-                className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
-              />
             )}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              {message || '支持 Markdown；可粘贴图片，留言会保存到站点留言箱。'}
-            </p>
-            <button
-              type="button"
-              onClick={() => submitComment()}
-              disabled={submitting || uploadingImage}
-              className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
-            >
-              {uploadingImage ? '导入图片中...' : submitting ? '发送中...' : '发送留言'}
-            </button>
-          </div>
-        </div>
 
-        {replyTarget && (
-          <div className="mt-6 rounded-2xl border border-indigo-400/40 bg-indigo-500/10 p-4">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="text-xs font-bold text-indigo-500">回复 {replyTarget.author}</p>
-              <button type="button" onClick={() => { setReplyTarget(null); setReplyContent(''); }} className="text-xs font-bold text-slate-400 hover:text-slate-700 dark:hover:text-white">
-                取消
-              </button>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                <span>{content.length} / {MAX_CONTENT_LENGTH}</span>
+                <span>图片 {imageUrls.length} / {MAX_COMMENT_IMAGES}</span>
+                <span>Ctrl + Enter 发送</span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm font-bold text-slate-200 transition hover:bg-white/10">
+                  {uploadingImage ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+                  {uploadingImage ? '上传中' : '添加图片'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => {
+                      handleImageFiles(event.target.files || undefined);
+                      event.currentTarget.value = '';
+                    }}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => submitComment()}
+                  disabled={submitting || uploadingImage}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-indigo-400 to-indigo-600 px-5 text-sm font-black text-white shadow-lg shadow-indigo-500/25 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  {submitting ? '发送中' : '发表评论'}
+                </button>
+              </div>
             </div>
-            <textarea
-              value={replyContent}
-              onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="写下你的回复..."
-              rows={3}
-              className="w-full bg-white/40 dark:bg-slate-950/40 border border-white/50 dark:border-slate-700/60 rounded-2xl px-4 py-3 text-sm outline-none resize-y focus:ring-2 focus:ring-indigo-500/50"
-            />
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                onClick={() => submitComment(replyTarget.id)}
-                disabled={submitting}
-                className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-60 text-white rounded-2xl text-sm font-black shadow-lg shadow-indigo-500/30 transition-all"
-              >
-                {submitting ? '发送中...' : '发送回复'}
-              </button>
-            </div>
-          </div>
-        )}
 
-        <div className="mt-8 space-y-4">
-          {loading && <p className="text-center text-sm text-slate-500">正在读取留言...</p>}
-          {!loading && rootComments.length === 0 && (
-            <p className="text-center text-sm text-slate-500">还没有留言，来当第一个吧。</p>
+            {message && <p className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-bold text-slate-300">{message}</p>}
+          </div>
+
+          {replyTarget && (
+            <div className="rounded-[22px] border border-indigo-300/25 bg-indigo-500/10 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-xs font-black text-indigo-200">回复 {authorName(replyTarget)}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReplyTarget(null);
+                    setReplyContent('');
+                  }}
+                  className="text-xs font-bold text-slate-400 transition hover:text-white"
+                >
+                  取消
+                </button>
+              </div>
+              <textarea
+                value={replyContent}
+                onChange={(event) => setReplyContent(event.target.value)}
+                onKeyDown={(event) => {
+                  if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') submitComment(replyTarget.id);
+                }}
+                maxLength={MAX_CONTENT_LENGTH}
+                placeholder="写下你的回复..."
+                rows={3}
+                className="min-h-24 w-full resize-y rounded-2xl border border-white/10 bg-slate-950/55 px-4 py-3 text-sm leading-7 text-white outline-none transition placeholder:text-slate-500 focus:border-indigo-300 focus:ring-4 focus:ring-indigo-500/15"
+              />
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => submitComment(replyTarget.id)}
+                  disabled={submitting}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-2xl bg-indigo-500 px-4 text-xs font-black text-white shadow-lg shadow-indigo-500/20 transition hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  发送回复
+                </button>
+              </div>
+            </div>
           )}
-          {rootComments.map((comment) => (
-            <article key={comment.id} className="rounded-2xl bg-white/35 dark:bg-slate-950/35 border border-white/45 dark:border-slate-700/60 p-4 backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-4 mb-2">
-                <span className="text-sm font-black text-slate-800 dark:text-slate-100">{comment.author}</span>
-                <time className="text-[11px] text-slate-400">{new Date(comment.createdAt).toLocaleString('zh-CN')}</time>
+
+          <div className="grid gap-4">
+            {loading && (
+              <div className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-8 text-center text-sm font-bold text-slate-400">
+                正在读取评论...
               </div>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">{renderCommentContent(comment.content)}</p>
-              <div className="mt-3 flex flex-wrap items-center gap-4">
-                <button type="button" onClick={() => setReplyTarget(comment)} className="text-xs font-black text-indigo-500 hover:text-indigo-600">回复</button>
+            )}
+            {!loading && rootComments.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-4 py-8 text-center text-sm font-bold text-slate-400">
+                还没有评论，先写第一条。
               </div>
-              {repliesByParent[comment.id]?.length > 0 && (
-                <div className="mt-4 space-y-3 border-l-2 border-indigo-400/40 pl-4">
-                  {repliesByParent[comment.id].map((reply) => (
-                    <div key={reply.id} className="rounded-2xl bg-white/25 dark:bg-slate-900/45 p-3">
-                      <div className="mb-1 flex items-center justify-between gap-3">
-                        <span className="text-xs font-black text-indigo-500">{reply.author}</span>
-                        <time className="text-[10px] text-slate-400">{new Date(reply.createdAt).toLocaleString('zh-CN')}</time>
-                      </div>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-700 dark:text-slate-300">{renderCommentContent(reply.content)}</p>
+            )}
+            {rootComments.map((comment) => {
+              const name = authorName(comment);
+              const replies = repliesByParent[comment.id] || [];
+              return (
+                <article key={comment.id} className="rounded-[24px] border border-white/10 bg-slate-950/40 p-4 shadow-xl shadow-slate-950/20">
+                  <div className="grid grid-cols-[42px_1fr] gap-3">
+                    <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-400/35 to-sky-400/20 font-black text-white">
+                      {avatarText(name)}
                     </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          ))}
+                    <div className="min-w-0">
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                        <h3 className="font-black text-white">{name}</h3>
+                        <time className="font-mono text-[11px] text-slate-500">{formatDate(comment.createdAt)}</time>
+                      </div>
+                      <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-7 text-slate-200">{getDisplayContent(comment)}</p>
+                      {renderImages(getDisplayImages(comment))}
+                      <div className="mt-3 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setReplyTarget(comment)}
+                          className="inline-flex h-9 items-center gap-2 rounded-xl px-3 text-xs font-black text-slate-300 transition hover:bg-white/10 hover:text-white"
+                        >
+                          <Reply size={14} /> 回复
+                        </button>
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-500">
+                          <MessageSquareText size={13} /> {replies.length} 条回复
+                        </span>
+                      </div>
+
+                      {replies.length > 0 && (
+                        <div className="relative mt-4 grid gap-3 border-l border-white/15 pl-4">
+                          {replies.map((reply) => {
+                            const replyName = authorName(reply);
+                            return (
+                              <div key={reply.id} className="rounded-2xl border border-white/10 bg-white/[0.045] px-4 py-3">
+                                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                                  <span className="text-sm font-black text-indigo-100">{replyName}</span>
+                                  <time className="font-mono text-[10px] text-slate-500">{formatDate(reply.createdAt)}</time>
+                                </div>
+                                <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-300">{getDisplayContent(reply)}</p>
+                                {renderImages(getDisplayImages(reply), true)}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
       </div>
-    </div>
+
+      {previewImage && (
+        <div className="fixed inset-0 z-[1200] grid place-items-center bg-slate-950/80 p-4 backdrop-blur-md" onClick={() => setPreviewImage(null)}>
+          <button type="button" className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white hover:bg-white/20" aria-label="关闭预览">
+            <X size={20} />
+          </button>
+          <img src={previewImage.url} alt={previewImage.alt || '评论图片'} className="max-h-[88vh] max-w-[94vw] rounded-3xl border border-white/15 object-contain shadow-2xl" />
+        </div>
+      )}
+    </section>
   );
 }
