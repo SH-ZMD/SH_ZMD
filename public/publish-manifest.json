@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "kind": "blog-publish-manifest",
+  "updatedAt": "2026-07-06T02:52:17",
+  "fingerprint": "c2b53cde00be047a26677d081dc33f63888697268e2bf995eb3a37455832ba3a",
+  "entryCount": 250,
+  "syncFiles": 58,
+  "syncDirs": [
+    "posts",
+    "chatters",
+    "moments",
+    "public/image",
+    "public/audio"
+  ],
+  "note": "Online publish succeeds only when this fingerprint is visible on the production site."
+}
