@@ -45,9 +45,6 @@ export const siteConfig = {
   chatterTitle: "云端杂谈", // 你可以改成任何你喜欢的名字
   chatterDescription: "代码、学术、提瓦特与泰拉大陆的碎片记录",
 
-
-  // 👇 【新增】：全局背景弹幕配置
-  danmakuList: ["无限Token", "GPT", "玩安慕希...", "在干嘛呢？", "有笨蛋嘛？", "BUG 修复进度 99%", "今天背单词了吗？", "到底在干嘛？"],
   gitalkConfig: {
     clientID: "",
     clientSecret: "",

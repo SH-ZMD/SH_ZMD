@@ -13,7 +13,6 @@ const criticalTextFiles = [
   'components/Navbar.tsx',
   'components/Navbar.public.tsx',
   'components/KeyUrlPublicTable.tsx',
-  'components/settings/KeyUrlSection.tsx',
   'components/settings/LifeModulesSection.tsx',
   'app/settings/page.tsx',
   'app/photowall/page.public.tsx',
@@ -44,7 +43,9 @@ const publicRetiredFiles = [
   'app/api/local-key-url-tables/route.ts',
   'app/api/local-life-modules/route.ts',
   'components/CyberCat.tsx',
+  'components/DanmakuBackground.tsx',
   'components/LazyCyberCat.tsx',
+  'components/LazyDanmakuBackground.tsx',
   'components/PendingOperationsInbox.tsx',
   'components/CommentNotifier.tsx',
   'components/WalineComments.tsx',
@@ -54,7 +55,7 @@ const interfaceChecks = [
   {
     file: 'app/layout.tsx',
     required: [],
-    forbidden: ['LazyCyberCat'],
+    forbidden: ['LazyCyberCat', 'LazyDanmakuBackground'],
   },
   {
     file: publicNavbarFile,
@@ -269,6 +270,29 @@ for (const check of interfaceChecks) {
   if (missing.length) failures.push(`${check.file} is missing interface markers: ${missing.join(', ')}`);
   if (stale.length) failures.push(`${check.file} still contains stale markers: ${stale.join(', ')}`);
   if (!missing.length && !stale.length) console.log(`INTERFACE OK: ${check.file}`);
+}
+
+if (isManagerSource) {
+  const settingsFile = 'app/settings/page.tsx';
+  const settingsText = read(settingsFile);
+  const required = ["{ id: 'plans'", "{ id: 'recommendations'", 'mode="plans"', 'mode="recommendations"'];
+  const forbidden = [
+    'GallerySection',
+    'DanmakuSection',
+    'KeyUrlSection',
+    '图床配置管理',
+    '全站弹幕设置',
+    '中转站推荐表',
+    '计划 / 推荐表',
+    "activeTab === 'gallery'",
+    "activeTab === 'danmaku'",
+    "activeTab === 'keyurl'",
+  ];
+  const missing = required.filter((marker) => !settingsText.includes(marker));
+  const stale = forbidden.filter((marker) => settingsText.includes(marker));
+  if (missing.length) failures.push(`${settingsFile} is missing settings split markers: ${missing.join(', ')}`);
+  if (stale.length) failures.push(`${settingsFile} still contains removed settings modules: ${stale.join(', ')}`);
+  if (!missing.length && !stale.length) console.log(`SETTINGS OK: removed unused settings modules and split plans/recommendations`);
 }
 
 if (!isManagerSource) {

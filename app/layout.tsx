@@ -10,7 +10,6 @@ import LazyClickEffect from "../components/LazyClickEffect";
 import BackgroundSlider from "../components/BackgroundSlider";
 import GlobalToolbox from "../components/GlobalToolbox";
 import SplashScreen from "../components/SplashScreen";
-import LazyDanmakuBackground from '../components/LazyDanmakuBackground';
 import IdleMount from '../components/IdleMount';
 
 import MobileBackButton from '../components/MobileBackButton';
@@ -85,13 +84,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                     <LazyBackgroundEffects />
                   </IdleMount>
                 </div>
-              </div>
-
-              {/* 隐藏手机端弹幕 */}
-              <div className="hidden md:block">
-                <IdleMount delay={2600}>
-                  <LazyDanmakuBackground />
-                </IdleMount>
               </div>
 
               <div className="relative z-10 flex-1 flex flex-col">
