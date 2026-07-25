@@ -28,7 +28,7 @@ function loadStars(): StarItem[] {
   if (fs.existsSync(postsDir)) {
     for (const fileName of fs.readdirSync(postsDir).filter(f => f.endsWith('.md'))) {
       try {
-        const { data, content } = matter(fs.readFileSync(path.join(postsDir, fileName), 'utf8'));
+        const { data, content } = matter(fs.readFileSync(path.join(process.cwd(), 'posts', fileName), 'utf8'));
         if (data.hidden === true) continue;
         stars.push({
           id: 'post-' + fileName,
@@ -47,7 +47,7 @@ function loadStars(): StarItem[] {
   if (fs.existsSync(chattersDir)) {
     for (const fileName of fs.readdirSync(chattersDir).filter(f => f.endsWith('.md'))) {
       try {
-        const { data, content } = matter(fs.readFileSync(path.join(chattersDir, fileName), 'utf8'));
+        const { data, content } = matter(fs.readFileSync(path.join(process.cwd(), 'chatters', fileName), 'utf8'));
         if (data.hidden === true) continue;
         if (fileName.startsWith('draft')) continue;
         stars.push({
@@ -63,19 +63,16 @@ function loadStars(): StarItem[] {
   }
 
   // Moments
-  const momentDirs = [
-    path.join(process.cwd(), 'moments'),
-    path.join(process.cwd(), 'posts', 'moments'),
-  ];
-  for (const dir of momentDirs) {
-    if (!fs.existsSync(dir)) continue;
-    for (const fileName of fs.readdirSync(dir).filter(f => f.endsWith('.md'))) {
+  const appendMoments = (directory: string, nested = false) => {
+    if (!fs.existsSync(directory)) return;
+    for (const fileName of fs.readdirSync(directory).filter(f => f.endsWith('.md'))) {
       try {
-        const { data, content } = matter(fs.readFileSync(path.join(dir, fileName), 'utf8'));
+        const fullPath = nested ? path.join(process.cwd(), 'posts', 'moments', fileName) : path.join(process.cwd(), 'moments', fileName);
+        const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
         if (data.hidden === true) continue;
         const text = (content || '').replace(/!\[[^\]]*\]\([^)]+\)/g, '').replace(/<[^>]+>/g, '').trim();
         stars.push({
-          id: 'moment-' + dir + '-' + fileName,
+          id: `moment-${nested ? 'legacy' : 'current'}-${fileName}`,
           title: text.slice(0, 24) || '新的说说',
           type: 'moment',
           date: data.date || '2026-01-01',
@@ -84,7 +81,9 @@ function loadStars(): StarItem[] {
         });
       } catch {}
     }
-  }
+  };
+  appendMoments(path.join(process.cwd(), 'moments'));
+  appendMoments(path.join(process.cwd(), 'posts', 'moments'), true);
 
   return stars.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }

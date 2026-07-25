@@ -17,8 +17,12 @@ import { OperationProvider } from '../context/OperationContext';
 import { ToastProvider } from '../components/ToastProvider';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.siteUrl),
   title: siteConfig.title,
   description: siteConfig.bio,
+  alternates: { canonical: '/' },
+  openGraph: { type: 'website', locale: 'zh_CN', url: '/', siteName: siteConfig.title, title: siteConfig.title, description: siteConfig.bio, images: [{ url: siteConfig.avatarUrl, alt: siteConfig.authorName }] },
+  twitter: { card: 'summary_large_image', title: siteConfig.title, description: siteConfig.bio, images: [siteConfig.avatarUrl] },
   icons: {
     icon: siteConfig.faviconUrl,
     apple: siteConfig.faviconUrl,
@@ -52,7 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         />
       </head>
 
-      <body className="w-screen overflow-x-hidden min-h-full flex flex-col relative transition-colors duration-1000 bg-slate-50 dark:bg-slate-950 font-serif">
+      <body className="w-full overflow-x-hidden min-h-full flex flex-col relative transition-colors duration-1000 bg-slate-50 dark:bg-slate-950 font-serif">
         <ThemeProvider>
           <ToastProvider>
             <OperationProvider>

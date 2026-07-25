@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "kind": "blog-publish-manifest",
-  "updatedAt": "2026-07-06T02:52:17",
-  "fingerprint": "c2b53cde00be047a26677d081dc33f63888697268e2bf995eb3a37455832ba3a",
-  "entryCount": 250,
-  "syncFiles": 58,
+  "updatedAt": "2026-07-25T16:32:16",
+  "fingerprint": "e40c501f7fb1c543b13d3555deab32c6ab25ba6cec33fcc078cf739ac4782ad7",
+  "entryCount": 264,
+  "syncFiles": 67,
   "syncDirs": [
     "posts",
     "chatters",

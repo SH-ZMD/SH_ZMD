@@ -26,7 +26,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
   const [lightbox, setLightbox] = useState<{ images: string[], index: number } | null>(null);
 
   const { showToast } = useToast();
-  const { operations, addOperation, removeOperation } = useOperations();
+  const { operations, addOperation, removeOperation, markPublishStateDirty } = useOperations();
   const canManage = useLocalManagerRuntime();
 
   const [isPublishOpen, setIsPublishOpen] = useState(false);
@@ -112,6 +112,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       }
       if (newUrls.length > 0) {
         setNewMoment(prev => ({ ...prev, images: [...prev.images, ...newUrls] }));
+        markPublishStateDirty('同步说说图片附件', '说说图片已经写入本地 public/image，需要进入待处理台刷新发布状态。');
         showToast(`已导入 ${newUrls.length} 张本地图片`, "success");
       }
     } catch (error: any) {
@@ -198,6 +199,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       const data = await res.json();
       if (data.success) {
         showToast("🎉 发布成功！正在刷新...", "success");
+        markPublishStateDirty('同步新说说发布', '说说已经直接写入本地文件，需要进入待处理台同步发布状态。');
         setIsPublishOpen(false);
         setNewMoment({ content: '', location: '', images: [] });
         setTimeout(() => window.location.reload(), 1000);
@@ -228,6 +230,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
 
       const data = await res.json();
       if (data.success) {
+        markPublishStateDirty('同步说说删除', '说说文件已经从本地删除，需要进入待处理台同步发布状态。');
         showToast("🗑️ 说说已彻底删除", "success");
         setTimeout(() => window.location.reload(), 1000);
       } else {
@@ -265,6 +268,7 @@ export default function MomentList({ moments, authorName, avatarUrl }: any) {
       const data = await res.json();
       if (data.success) {
         setHiddenMap(prev => ({ ...prev, [moment.id]: nextHidden }));
+        markPublishStateDirty(nextHidden ? '同步说说隐藏' : '同步说说恢复', '说说显示状态已经写入本地文件，需要进入待处理台同步发布状态。');
         showToast(data.message || (nextHidden ? '已隐藏' : '已恢复显示'), 'success');
       } else {
         showToast(data.message || '切换失败', 'error');

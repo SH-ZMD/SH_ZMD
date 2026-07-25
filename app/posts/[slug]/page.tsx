@@ -8,6 +8,8 @@ import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm'; // 🌟 核心引入：支持删除线和表格等 GFM 语法
 import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -24,6 +26,7 @@ import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import SidebarLyric from '../../../components/SidebarLyric';
 import LocalManagerOnly from '../../../components/LocalManagerOnly';
+import { markdownSanitizeSchema } from '../../../lib/markdownSanitize';
 
 export async function generateStaticParams() {
   const postsDirectory = path.join(process.cwd(), 'posts');
@@ -90,6 +93,7 @@ async function getPostData(slug: string) {
     .use(remarkMath)
     // 🌟 allowDangerousHtml 必须开启，这样上面生成的 <br/> 才能顺利通过变成真正的换行！
     .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeRaw)
     // 🌟 核心升级：开启代码语言自动侦测，并限制白名单，大幅提高 C++ 和常用语言的猜中率！
     // @ts-ignore
     .use(rehypeHighlight, {
@@ -98,7 +102,8 @@ async function getPostData(slug: string) {
       subset: ['cpp', 'c', 'python', 'java', 'javascript', 'typescript', 'go', 'rust', 'bash', 'json', 'html', 'css', 'sql', 'xml']
     })
     .use(rehypeKatex)
-    .use(rehypeStringify, { allowDangerousHtml: true })
+    .use(rehypeSanitize, markdownSanitizeSchema)
+    .use(rehypeStringify)
     .process(content);
 
   return {

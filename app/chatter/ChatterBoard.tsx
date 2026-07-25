@@ -6,6 +6,7 @@ import { siteConfig } from '../../siteConfig';
 import { Eye, EyeOff, Plus, Pencil, Trash2, Search, Sparkles, AlertTriangle, X } from 'lucide-react';
 import { useToast } from '../../components/ToastProvider';
 import { useLocalManagerRuntime } from '../../lib/localManagerRuntime';
+import { useOptionalOperations } from '../../context/OperationContext';
 
 type Chatter = {
   slug: string;
@@ -24,6 +25,7 @@ export default function ChatterBoard({ chatters: initialChatters }: { chatters: 
   const [activeTag, setActiveTag] = useState("全部");
   const { showToast } = useToast();
   const canManage = useLocalManagerRuntime();
+  const operations = useOptionalOperations();
 
   // 👇 控制自定义弹窗的状态
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; slug: string | null; title: string | null }>({
@@ -64,6 +66,7 @@ export default function ChatterBoard({ chatters: initialChatters }: { chatters: 
       const data = await res.json();
       if (data.success) {
         setChatters(prev => prev.map(item => item.slug === chatter.slug ? { ...item, hidden: nextHidden } : item));
+        operations?.markPublishStateDirty(nextHidden ? '同步杂谈隐藏' : '同步杂谈恢复', '杂谈显示状态已经写入本地文件，需要进入待处理台同步发布状态。');
         showToast(data.message || (nextHidden ? '已隐藏' : '已恢复显示'), 'success');
       } else {
         showToast(data.message || '切换失败', 'error');
@@ -95,6 +98,7 @@ export default function ChatterBoard({ chatters: initialChatters }: { chatters: 
       if (data.success) {
         showToast("🗑️ 物理文件已彻底销毁", "success");
         setChatters(prev => prev.filter(c => c.slug !== slug));
+        operations?.markPublishStateDirty('同步杂谈删除', '杂谈文件已经从本地删除，需要进入待处理台同步发布状态。');
       } else {
         showToast("❌ 销毁失败: " + data.message, "error");
       }

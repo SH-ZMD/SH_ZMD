@@ -11,6 +11,8 @@ import remarkGfm from 'remark-gfm'; // 🌟 引入 GFM 以支持 ~~删除线~~
 import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import rehypeKatex from 'rehype-katex';
 import 'highlight.js/styles/atom-one-dark.css';
@@ -20,6 +22,7 @@ import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { siteConfig } from '../../siteConfig';
 import LocalManagerOnly from '../../components/LocalManagerOnly';
+import { markdownSanitizeSchema } from '../../lib/markdownSanitize';
 
 // 🌟 引入刚刚写好的前端交互引擎
 import AboutClient from '../../components/AboutClient';
@@ -83,6 +86,7 @@ export default async function AdminAboutPage() {
       .use(remarkGfm) // 🌟 挂载 GFM 解析
       .use(remarkMath)
       .use(remarkRehype, { allowDangerousHtml: true })
+      .use(rehypeRaw)
       // 🌟 核心升级：开启自动侦测，并限制白名单，大幅提高 C++ 等语言的猜中率
       // @ts-ignore
       .use(rehypeHighlight, {
@@ -91,7 +95,8 @@ export default async function AdminAboutPage() {
         subset: ['cpp', 'c', 'python', 'java', 'javascript', 'typescript', 'go', 'rust', 'bash', 'json', 'html', 'css', 'sql', 'xml']
       })
       .use(rehypeKatex)
-      .use(rehypeStringify, { allowDangerousHtml: true })
+      .use(rehypeSanitize, markdownSanitizeSchema)
+      .use(rehypeStringify)
       .process(content);
 
     contentHtml = processedContent.toString();

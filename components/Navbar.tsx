@@ -36,19 +36,6 @@ export default function Navbar() {
   };
 
   // --- 物理引擎：手机端按钮拖拽逻辑 ---
-  const dragY = useMotionValue(0);
-  const [constraints, setConstraints] = useState({ top: 0, bottom: 0 });
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const vh = window.innerHeight;
-      setConstraints({
-        top: -(vh / 2) + 80,
-        bottom: (vh / 2) - 80
-      });
-    }
-  }, []);
-
   useEffect(() => {
     if (isMobileMenuOpen) rawRotation.set(0);
   }, [isMobileMenuOpen, rawRotation]);
@@ -103,7 +90,7 @@ export default function Navbar() {
       <header className={`hidden md:block w-full fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${showNav ? 'translate-y-0' : '-translate-y-full'} bg-white/50 dark:bg-slate-950/55 backdrop-blur-2xl border-white/30 dark:border-white/10 shadow-lg shadow-slate-900/5`}>
         <div className="w-[94%] max-w-7xl mx-auto h-16 flex items-center justify-between gap-4 px-4 box-border">
           <Link href="/" className="group flex items-center gap-3 shrink-0 rounded-2xl px-3 py-2 transition-all hover:bg-white/45 dark:hover:bg-white/5">
-            <span className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/25 text-sm font-black">SH</span>
+            <span aria-hidden="true" className="grid h-9 w-9 place-items-center rounded-2xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 text-white shadow-lg shadow-indigo-500/25 text-sm font-black">SH</span>
             <span className="hidden xl:flex items-baseline whitespace-nowrap text-lg font-black tracking-tight text-slate-800 dark:text-white">
               {siteConfig.navTitle || siteConfig.authorName}
               <span className="text-indigo-500 mx-1">{siteConfig.navSuffix || 'の'}</span>
@@ -143,22 +130,15 @@ export default function Navbar() {
       {/* 手机端：可拖拽吸附的触发球 */}
       <div className="md:hidden">
         <motion.button
-          drag="y"
-          dragConstraints={constraints}
-          dragElastic={0.1}
-          dragMomentum={false}
-          style={{ y: dragY }}
-          onClick={() => {
-            if (Math.abs(dragY.getVelocity()) < 10) {
-              setIsMobileMenuOpen(true);
-            }
-          }}
-          className={`fixed top-1/2 right-0 -translate-y-1/2 w-12 h-28 bg-indigo-500/80 backdrop-blur-xl rounded-l-full shadow-[-5px_0_20px_rgba(99,102,241,0.4)] z-[60] flex items-center justify-center transition-all duration-500 border-y border-l border-white/30 touch-none ${isMobileMenuOpen ? 'translate-x-full opacity-0 pointer-events-none' : 'translate-x-0 opacity-100'}`}
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="打开导航菜单"
+          title="导航菜单"
+          className={`fixed bottom-5 right-4 h-11 w-11 rounded-full bg-indigo-600/90 backdrop-blur-xl shadow-lg shadow-indigo-950/30 z-[60] flex items-center justify-center transition-all duration-300 border border-white/40 ${isMobileMenuOpen ? 'scale-75 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}
         >
-          <div className="flex flex-col gap-1.5 items-center justify-center mr-2">
-            <div className="w-1.5 h-1.5 bg-white/90 rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/90 rounded-full"></div>
-            <div className="w-1.5 h-1.5 bg-white/90 rounded-full"></div>
+          <div className="flex flex-col gap-1 items-center justify-center">
+            <div className="h-0.5 w-5 rounded-full bg-white"></div>
+            <div className="h-0.5 w-5 rounded-full bg-white"></div>
+            <div className="h-0.5 w-5 rounded-full bg-white"></div>
           </div>
         </motion.button>
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { getRequestIp, protectPublicMutation } from '../../../lib/abuseProtection';
 
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
@@ -129,19 +130,16 @@ async function prepareImage(file: File) {
   const sourceType = file.type || 'application/octet-stream';
   const sourceExt = extensionForType(sourceType);
 
-  if (sourceType === 'image/gif') {
-    return {
-      imageBuffer: original,
-      imageType: sourceType,
-      imageExt: sourceExt,
-      thumbnailBuffer: original,
-      thumbnailType: sourceType,
-      thumbnailExt: sourceExt,
-    };
+  const sharp = await loadOptionalSharp();
+  if (!sharp) throw new Error('图片验证服务暂时不可用。');
+
+  const metadata = await sharp(original).metadata();
+  const pixels = Number(metadata.width || 0) * Number(metadata.height || 0);
+  if (!metadata.format || pixels <= 0 || pixels > 40_000_000) {
+    throw new Error('图片内容无效或像素总量过大。');
   }
 
-  const sharp = await loadOptionalSharp();
-  if (!sharp) {
+  if (sourceType === 'image/gif' && metadata.format === 'gif') {
     return {
       imageBuffer: original,
       imageType: sourceType,
@@ -222,6 +220,17 @@ export async function POST(req: Request) {
   }
 
   const formData = await req.formData();
+  const protection = await protectPublicMutation(req, {
+    turnstileToken: String(formData.get('turnstileToken') || ''),
+    rules: [
+      { name: 'comment-image-hour', identity: getRequestIp(req), limit: 8, windowSeconds: 3600 },
+      { name: 'comment-image-day', identity: getRequestIp(req), limit: 20, windowSeconds: 86400 },
+      { name: 'comment-image-global', identity: 'all', limit: 200, windowSeconds: 86400 },
+    ],
+  });
+  if (!protection.ok) {
+    return NextResponse.json({ error: protection.error }, { status: protection.status });
+  }
   const file = formData.get('file');
   if (!(file instanceof File)) {
     return NextResponse.json({ error: '没有收到图片文件。' }, { status: 400 });

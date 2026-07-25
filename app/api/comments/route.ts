@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { getRequestIp, protectPublicMutation } from '../../../lib/abuseProtection';
 
 type CommentStatus = 'published' | 'deleted';
 
@@ -601,6 +602,22 @@ export async function POST(req: Request) {
 
     if (!nickname) return NextResponse.json({ error: '请先填写昵称。' }, { status: 400 });
     if (!content) return NextResponse.json({ error: '评论内容不能为空。' }, { status: 400 });
+
+    const protection = await protectPublicMutation(req, {
+      turnstileToken: String(body.turnstileToken || ''),
+      rules: [
+        { name: 'comment-ip-minute', identity: getRequestIp(req), limit: 3, windowSeconds: 60 },
+        { name: 'comment-nickname', identity: nickname.toLowerCase(), limit: 5, windowSeconds: 600 },
+        { name: 'comment-page', identity: pageId, limit: 30, windowSeconds: 60 },
+        { name: 'comment-global', identity: 'all', limit: 120, windowSeconds: 60 },
+      ],
+    });
+    if (!protection.ok) {
+      return NextResponse.json(
+        { error: protection.error },
+        { status: protection.status, headers: protection.retryAfter ? { 'Retry-After': String(protection.retryAfter) } : undefined },
+      );
+    }
 
     const remaining = checkRateLimit(req);
     if (remaining > 0) {

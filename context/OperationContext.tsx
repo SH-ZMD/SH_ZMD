@@ -16,6 +16,7 @@ export type OperationType =
   | 'sync_life_modules'
   | 'sync_key_url_tables'
   | 'sync_archive_collections'
+  | 'sync_publish_state'
   | 'create_moment';
 
 export interface Operation {
@@ -26,6 +27,7 @@ export interface Operation {
   timestamp: string;
   payload?: unknown;       // 实际要修改的数据内容
   value?: unknown;
+  key?: string;
 }
 
 type OperationInput = Omit<Operation, 'id' | 'timestamp'> & {
@@ -37,6 +39,7 @@ type OperationInput = Omit<Operation, 'id' | 'timestamp'> & {
 interface OperationContextType {
   operations: Operation[];
   addOperation: (op: OperationInput) => void;
+  markPublishStateDirty: (label?: string, description?: string) => void;
   removeOperation: (id: string) => void;
   clearOperations: () => void;
 }
@@ -80,6 +83,23 @@ export function OperationProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const markPublishStateDirty = (
+    label = '同步发布状态',
+    description = '本地客户端已经写入文件，请更新本地后再上传 GitHub。',
+  ) => {
+    addOperation({
+      id: `sync_publish_state_${Date.now()}`,
+      type: 'sync_publish_state',
+      label,
+      description,
+      payload: {
+        reason: label,
+        createdAt: new Date().toISOString(),
+      },
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+  };
+
   const removeOperation = (id: string) => {
     setOperations(prev => prev.filter(op => op.id !== id));
   };
@@ -87,7 +107,7 @@ export function OperationProvider({ children }: { children: React.ReactNode }) {
   const clearOperations = () => setOperations([]);
 
   return (
-    <OperationContext.Provider value={{ operations, addOperation, removeOperation, clearOperations }}>
+    <OperationContext.Provider value={{ operations, addOperation, markPublishStateDirty, removeOperation, clearOperations }}>
       {children}
     </OperationContext.Provider>
   );

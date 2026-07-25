@@ -18,16 +18,11 @@ export default function MomentsPage() {
 
   try {
     // 🌟 终极防漏绝招：同时扫描两个可能的文件夹，把所有的说说都抓出来！
-    const possibleDirs = [
-      path.join(process.cwd(), 'posts', 'moments'),
-      path.join(process.cwd(), 'moments')
-    ];
-
-    possibleDirs.forEach(dir => {
-      if (fs.existsSync(dir)) {
-        const fileNames = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+    const readDirectory = (directory: string, legacy = false) => {
+      if (fs.existsSync(directory)) {
+        const fileNames = fs.readdirSync(directory).filter(f => f.endsWith('.md'));
         fileNames.forEach(fileName => {
-          const fullPath = path.join(dir, fileName);
+          const fullPath = legacy ? path.join(process.cwd(), 'posts', 'moments', fileName) : path.join(process.cwd(), 'moments', fileName);
           const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
 
           allMoments.push({
@@ -40,7 +35,9 @@ export default function MomentsPage() {
           });
         });
       }
-    });
+    };
+    readDirectory(path.join(process.cwd(), 'posts', 'moments'), true);
+    readDirectory(path.join(process.cwd(), 'moments'));
 
     // 去重，防止你在两个文件夹放了同名文件
     allMoments = Array.from(new Map(allMoments.map(item => [item.id, item])).values());

@@ -1,6 +1,9 @@
 // siteConfig.ts - 你的全站“控制中心”
 
+const primarySiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sh-zmd.vercel.app";
+
 export const siteConfig = {
+  siteUrl: primarySiteUrl,
   // 1. 网站标题与博主信息
   title: "SH_ZMD的分享站",
   faviconUrl: "/image/face.jpg",
@@ -67,6 +70,6 @@ export const siteConfig = {
     maxOutputTokens: 150,
     temperature: 0.85,
   },
-  friendLinkApplyFormat: "名称：SH_ZMD的殖民地\n简介：正在学习AI agent的化工小白，分享从零开始的经验\n链接：https://sh-zmd.vercel.app/\n",
+  friendLinkApplyFormat: `名称：SH_ZMD的分享站\n简介：正在学习AI agent的化工小白，分享从零开始的经验\n链接：${primarySiteUrl}/\n`,
   enableLevelSystem: true,
 };

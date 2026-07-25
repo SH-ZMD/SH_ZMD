@@ -17,6 +17,7 @@ const criticalTextFiles = [
   'components/Navbar.public.tsx',
   'components/KeyUrlPublicTable.tsx',
   'components/Comments.tsx',
+  'components/TurnstileWidget.tsx',
   'components/settings/CommentSection.tsx',
   'components/settings/LifeModulesSection.tsx',
   'app/settings/page.tsx',
@@ -29,6 +30,8 @@ const criticalTextFiles = [
   'cms_core/api/drafts.py',
   'app/api/comments/route.ts',
   'app/api/comment-images/route.ts',
+  'lib/markdownSanitize.ts',
+  'lib/abuseProtection.ts',
 ];
 
 const mojibakePatterns = [
@@ -62,6 +65,7 @@ const publicRetiredFiles = [
   'components/LabComments.tsx',
   'components/LazyCyberCat.tsx',
   'components/LazyDanmakuBackground.tsx',
+  'components/LocalWorkbenchClient.tsx',
   'components/PendingOperationsInbox.tsx',
   'components/CommentNotifier.tsx',
   'components/WeatherWidget.tsx',
@@ -72,6 +76,8 @@ const publicRetiredDirs = [
   'app/drafts',
   'app/editor',
   'app/settings',
+  'app/workbench',
+  'app/api/local-workbench',
   'components/settings',
 ];
 
@@ -79,6 +85,9 @@ const requiredSyncDirs = ['posts', 'chatters', 'moments', 'public/image', 'publi
 
 const requiredSyncFiles = [
   '.gitignore',
+  '.env.example',
+  '.github/workflows/quality.yml',
+  'eslint.config.mjs',
   'next.config.ts',
   'package.json',
   'package-lock.json',
@@ -95,6 +104,8 @@ const requiredSyncFiles = [
   'app/guestbook/page.tsx',
   'app/key-urls/page.tsx',
   'app/layout.tsx',
+  'app/robots.ts',
+  'app/sitemap.ts',
   'app/moments/MomentList.tsx',
   'app/moments/page.tsx',
   'app/page.tsx',
@@ -108,6 +119,7 @@ const requiredSyncFiles = [
   'app/tree/page.tsx',
   'components/ArchiveCollectionsClient.tsx',
   'components/Comments.tsx',
+  'components/TurnstileWidget.tsx',
   'components/IdleMount.tsx',
   'components/KeyUrlPublicTable.tsx',
   'components/LocalManagerOnly.tsx',
@@ -115,6 +127,8 @@ const requiredSyncFiles = [
   'components/Navbar.tsx',
   'context/OperationContext.tsx',
   'lib/localManagerRuntime.ts',
+  'lib/markdownSanitize.ts',
+  'lib/abuseProtection.ts',
   'scripts/health-check.mjs',
   'public/archive-collections.json',
   'public/key-url-tables.json',
@@ -128,6 +142,7 @@ const requiredSyncFiles = [
 ];
 
 const requiredSyncSourceOverrides = new Map([
+  ['next.config.ts', 'next.config.public.ts'],
   ['app/photowall/page.tsx', 'app/photowall/page.public.tsx'],
   ['components/Navbar.tsx', 'components/Navbar.public.tsx'],
 ]);
@@ -167,7 +182,7 @@ const interfaceChecks = [
   {
     file: publicNavbarFile,
     required: ['推荐表', '中转站', '/recommendations', '/key-urls'],
-    forbidden: ["{ name: '分享表'", "{ name: '设置'", "{ name: '草稿箱'", '/settings', '/drafts', '/photowall', 'PendingOperationsInbox'],
+    forbidden: ["{ name: '分享表'", "{ name: '设置'", "{ name: '草稿箱'", '/settings', '/drafts', '/workbench', '/photowall', '工作台', 'PendingOperationsInbox'],
   },
   {
     file: publicPhotoWallFile,
@@ -247,7 +262,15 @@ const interfaceChecks = [
   },
 ];
 
-const dependencyScanRoots = ['app', 'components', 'context', 'data', 'scripts'];
+const dependencyScanRoots = ['app', 'components', 'context', 'data', 'lib', 'scripts'];
+
+const markdownSanitizedFiles = [
+  'app/about/page.tsx',
+  'app/posts/[slug]/page.tsx',
+  'app/chatter/[slug]/page.tsx',
+];
+
+const retiredDependencies = ['gitalk', 'marked', 'remark-html'];
 const dependencyScanExtensions = new Set(['.js', '.jsx', '.mjs', '.cjs', '.ts', '.tsx']);
 const nodeBuiltins = new Set([
   'assert',
@@ -486,6 +509,51 @@ if (isManagerSource) {
   if (stale.length) failures.push(`${settingsFile} still contains removed settings modules: ${stale.join(', ')}`);
   if (!missing.length && !stale.length) console.log(`SETTINGS OK: removed unused settings modules and split plans/recommendations`);
 
+  const operationText = read('context/OperationContext.tsx');
+  const operationRequired = ["'sync_publish_state'", 'markPublishStateDirty', 'key?: string'];
+  const missingOperationMarkers = operationRequired.filter((marker) => !operationText.includes(marker));
+  if (missingOperationMarkers.length) {
+    failures.push(`context/OperationContext.tsx is missing pending-operation guards: ${missingOperationMarkers.join(', ')}`);
+  } else {
+    console.log('PENDING OPS OK: local publish-state changes can be queued');
+  }
+
+  const draftsApiText = read('cms_core/api/drafts.py');
+  const draftsRequired = [
+    'sync_publish_state',
+    'CONFIG',
+    'sync_friends',
+    'sync_photowall',
+    'sync_projects',
+    'delete_file_from_publish_targets',
+    '_refresh_publish_manifest',
+  ];
+  const missingDraftMarkers = draftsRequired.filter((marker) => !draftsApiText.includes(marker));
+  if (missingDraftMarkers.length) {
+    failures.push(`cms_core/api/drafts.py is missing pending-operation handlers: ${missingDraftMarkers.join(', ')}`);
+  } else {
+    console.log('PENDING BACKEND OK: queued local changes are executable');
+  }
+
+  const dirtyMarkerFiles = [
+    'app/editor/page.tsx',
+    'app/moments/MomentList.tsx',
+    'app/chatter/ChatterBoard.tsx',
+    'components/TimelineClient.tsx',
+    'app/drafts/page.tsx',
+    'components/editor/RichTextEditor.tsx',
+    'components/editor/MetaMatrix.tsx',
+    'components/settings/BackgroundSection.tsx',
+    'components/settings/MusicSection.tsx',
+    'app/photowall/page.tsx',
+  ];
+  const missingDirtyMarkers = dirtyMarkerFiles.filter((file) => !read(file).includes('markPublishStateDirty'));
+  if (missingDirtyMarkers.length) {
+    failures.push(`Local write surfaces must mark the pending inbox dirty: ${missingDirtyMarkers.join(', ')}`);
+  } else {
+    console.log('PENDING SURFACES OK: direct local writes mark the inbox dirty');
+  }
+
   const syncText = read('cms_core/api/sync.py');
   const syncDirs = extractPythonStrings(syncText, 'SYNC_DIRS');
   const syncFiles = extractPythonStrings(syncText, 'SYNC_FILES');
@@ -565,8 +633,32 @@ if (!isManagerSource) {
   }
 }
 
+for (const file of markdownSanitizedFiles) {
+  if (!fs.existsSync(path.join(root, file))) continue;
+  const text = read(file);
+  const hasRawParsing = text.includes("from 'rehype-raw'") || text.includes('from "rehype-raw"');
+  const hasSanitize = text.includes("from 'rehype-sanitize'") || text.includes('from "rehype-sanitize"');
+  const hasSchema = text.includes('markdownSanitizeSchema');
+  if (!hasRawParsing || !hasSanitize || !hasSchema) {
+    failures.push(`${file} must sanitize rendered Markdown with rehype-raw, rehype-sanitize, and markdownSanitizeSchema`);
+  }
+}
+if (!failures.some((failure) => failure.includes('must sanitize rendered Markdown'))) {
+  console.log('MARKDOWN SECURITY OK: article, chatter, and about HTML are sanitized');
+}
+
 try {
   const packageJson = JSON.parse(read('package.json'));
+  const declaredPackageFields = {
+    ...(packageJson.dependencies || {}),
+    ...(packageJson.devDependencies || {}),
+    ...(packageJson.optionalDependencies || {}),
+    ...(packageJson.peerDependencies || {}),
+  };
+  const retiredFound = retiredDependencies.filter((dependency) => Object.prototype.hasOwnProperty.call(declaredPackageFields, dependency));
+  if (retiredFound.length) {
+    failures.push(`Retired dependencies must not return: ${retiredFound.join(', ')}`);
+  }
   const declaredDependencies = new Set([
     ...Object.keys(packageJson.dependencies || {}),
     ...Object.keys(packageJson.devDependencies || {}),

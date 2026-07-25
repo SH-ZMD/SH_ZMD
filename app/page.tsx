@@ -41,17 +41,9 @@ function cleanMomentText(content: string) {
 }
 
 function getLatestMoments() {
-  const momentDirs = [
-    path.join(process.cwd(), 'moments'),
-    path.join(process.cwd(), 'posts', 'moments'),
-  ];
   const moments: any[] = [];
 
-  for (const dir of momentDirs) {
-    if (!fs.existsSync(dir)) continue;
-    const fileNames = fs.readdirSync(dir).filter(f => f.endsWith('.md'));
-    for (const fileName of fileNames) {
-      const fullPath = path.join(dir, fileName);
+  const appendMoment = (fullPath: string, fileName: string) => {
       const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
       const text = cleanMomentText(content);
       const rawDate = data.date || '1970-01-01';
@@ -65,6 +57,18 @@ function getLatestMoments() {
         href: '/moments',
         badge: 'Latest Moment',
       });
+  };
+
+  const momentsDirectory = path.join(process.cwd(), 'moments');
+  if (fs.existsSync(momentsDirectory)) {
+    for (const fileName of fs.readdirSync(momentsDirectory).filter((name) => name.endsWith('.md'))) {
+      appendMoment(path.join(process.cwd(), 'moments', fileName), fileName);
+    }
+  }
+  const legacyMomentsDirectory = path.join(process.cwd(), 'posts', 'moments');
+  if (fs.existsSync(legacyMomentsDirectory)) {
+    for (const fileName of fs.readdirSync(legacyMomentsDirectory).filter((name) => name.endsWith('.md'))) {
+      appendMoment(path.join(process.cwd(), 'posts', 'moments', fileName), fileName);
     }
   }
 
@@ -83,7 +87,7 @@ export default function Home() {
     if (fs.existsSync(postsDirectory)) {
       const fileNames = fs.readdirSync(postsDirectory).filter(f => f.endsWith('.md'));
       allPosts = fileNames.map(fileName => {
-        const fullPath = path.join(postsDirectory, fileName);
+        const fullPath = path.join(process.cwd(), 'posts', fileName);
         const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
         const rawDate = data.date || '1970-01-01';
         return {
@@ -112,7 +116,7 @@ export default function Home() {
     if (fs.existsSync(chattersDirectory)) {
       const chatterFiles = fs.readdirSync(chattersDirectory).filter(f => f.endsWith('.md'));
       allChatters = chatterFiles.map(fileName => {
-        const fullPath = path.join(chattersDirectory, fileName);
+        const fullPath = path.join(process.cwd(), 'chatters', fileName);
         const { data, content } = matter(fs.readFileSync(fullPath, 'utf8'));
         const rawDate = data.date || '1970-01-01';
         const cover = data.cover || 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=1000&auto=format&fit=crop';

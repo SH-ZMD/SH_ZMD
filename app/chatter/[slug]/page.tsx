@@ -10,6 +10,8 @@ import remarkGfm from 'remark-gfm'; // 🌟 挂载 GFM 支持删除线
 import remarkMath from 'remark-math';
 import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize from 'rehype-sanitize';
 import rehypeStringify from 'rehype-stringify';
 import rehypeKatex from 'rehype-katex';
 
@@ -24,6 +26,7 @@ import SidebarLyric from '../../../components/SidebarLyric';
 import BackButton from '../../../components/BackButton';
 import Comments from '../../../components/Comments';
 import LocalManagerOnly from '../../../components/LocalManagerOnly';
+import { markdownSanitizeSchema } from '../../../lib/markdownSanitize';
 
 export async function generateStaticParams() {
   const chattersDirectory = path.join(process.cwd(), 'chatters');
@@ -81,6 +84,7 @@ async function getChatterData(slug: string) {
     .use(remarkGfm)
     .use(remarkMath)
     .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeRaw)
     // @ts-ignore
     .use(rehypeHighlight, {
       detect: true,
@@ -88,7 +92,8 @@ async function getChatterData(slug: string) {
       subset: ['cpp', 'c', 'python', 'java', 'javascript', 'typescript', 'go', 'rust', 'bash', 'json', 'html', 'css', 'sql', 'xml']
     })
     .use(rehypeKatex)
-    .use(rehypeStringify, { allowDangerousHtml: true })
+    .use(rehypeSanitize, markdownSanitizeSchema)
+    .use(rehypeStringify)
     .process(content);
 
   return {

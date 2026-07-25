@@ -7,6 +7,7 @@ import { Plus, Search, AlertTriangle, Sparkles, LayoutGrid, ListTree, Calendar, 
 import { useToast } from './ToastProvider';
 import Link from 'next/link';
 import { useLocalManagerRuntime } from '../lib/localManagerRuntime';
+import { useOptionalOperations } from '../context/OperationContext';
 
 export default function TimelineClient({ posts: initialPosts, tags }: { posts: any[], tags: { name: string, count: number }[] }) {
   const [posts, setPosts] = useState(initialPosts);
@@ -22,6 +23,7 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
   const gridScrollRef = useRef<HTMLDivElement>(null);
   const { showToast } = useToast();
   const canManage = useLocalManagerRuntime();
+  const operations = useOptionalOperations();
 
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; slug: string | null; title: string | null }>({
     isOpen: false,
@@ -71,6 +73,7 @@ export default function TimelineClient({ posts: initialPosts, tags }: { posts: a
       if (data.success) {
         showToast("🗑️ 文章已从硬盘物理粉碎", "success");
         setPosts(prev => prev.filter(p => p.slug !== deleteModal.slug));
+        operations?.markPublishStateDirty('同步文章删除', '文章文件已经从本地删除，需要进入待处理台同步发布状态。');
       } else {
         showToast("❌ 销毁失败: " + data.message, "error");
       }
