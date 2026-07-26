@@ -237,11 +237,24 @@
           "note": "提示词工程",
           "createdAt": 1783100852544,
           "updatedAt": 1783100910952
+        },
+        {
+          "id": "rec_1785037888604",
+          "title": "AI基础课——各类专业词的作用（强烈推荐）",
+          "description": "AI发展过程中各个功能的来源，例如prompt，harness等等的含义和作用,把诸如大模型，MCP，skill等等专业词的关联和作用讲解的非常非常清晰",
+          "url": "【Agent、Skill、Harness啥意思？一次性讲明白AI技术名词！】https://www.bilibili.com/video/BV1YRG46eE1n?vd_source=6fd24bb40ce3d74d81930e850fea96a7",
+          "imageUrl": "/image/pasted-1785037937517-3691bb.webp",
+          "type": "course",
+          "tags": [],
+          "rating": 5,
+          "note": "专业词认识",
+          "createdAt": 1785037888604,
+          "updatedAt": 1785038343906
         }
       ],
       "createdAt": 1783098284110,
       "updatedAt": 1783098324991
     }
   ],
-  "updatedAt": 1783100912677
+  "updatedAt": 1785038346833
 }
