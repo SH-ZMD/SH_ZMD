@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { ExternalLink, Filter, Search, ShieldCheck, Sparkles, Star } from 'lucide-react';
+import { ExternalLink, Search, ShieldCheck, Sparkles, Star } from 'lucide-react';
 
 type ItemStatus = 'active' | 'testing' | 'paused' | 'archived';
-type TableType = 'resources' | 'lowend';
 
 type PublicHealth = {
   state?: 'unknown' | 'ok' | 'bad' | 'error';
@@ -15,11 +14,10 @@ type PublicHealth = {
 
 type KeyUrlItem = {
   id: string;
-  table?: TableType;
   name: string;
   url: string;
-  group: string;
   status: ItemStatus;
+  score?: number;
   tags: string[];
   note: string;
   markedFields?: string[];
@@ -35,7 +33,7 @@ type KeyUrlTableData = {
 const statusMeta: Record<ItemStatus, { label: string; className: string; dot: string }> = {
   active: { label: '推荐中', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20', dot: 'bg-emerald-500' },
   testing: { label: '观察中', className: 'bg-sky-500/10 text-sky-600 dark:text-sky-300 border-sky-500/20', dot: 'bg-sky-500' },
-  paused: { label: '备用', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/20', dot: 'bg-amber-500' },
+  paused: { label: '暂停推荐', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-300 border-amber-500/20', dot: 'bg-amber-500' },
   archived: { label: '已归档', className: 'bg-slate-500/10 text-slate-500 dark:text-slate-300 border-slate-500/20', dot: 'bg-slate-400' },
 };
 
@@ -53,11 +51,14 @@ function extractUrl(item: KeyUrlItem) {
   return match?.[0] || '';
 }
 
+function getScore(item: KeyUrlItem) {
+  const score = Number(item.score ?? 80);
+  return Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 80;
+}
+
 export default function KeyUrlPublicTable() {
   const [items, setItems] = useState<KeyUrlItem[]>([]);
-  const [activeTable, setActiveTable] = useState<TableType>('resources');
   const [query, setQuery] = useState('');
-  const [groupFilter, setGroupFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +76,7 @@ export default function KeyUrlPublicTable() {
         if (!res.ok) throw new Error('没有找到公开中转站数据。');
         const data = await res.json() as KeyUrlTableData;
         if (!cancelled) {
-          setItems(Array.isArray(data.items) ? data.items.map((item) => ({ ...item, table: item.table || 'resources' })) : []);
+          setItems(Array.isArray(data.items) ? data.items : []);
           setUpdatedAt(typeof data.updatedAt === 'number' ? data.updatedAt : null);
         }
       } catch (error: unknown) {
@@ -89,26 +90,15 @@ export default function KeyUrlPublicTable() {
     return () => { cancelled = true; };
   }, []);
 
-  const groups = useMemo(() => {
-    return Array.from(new Set(items
-      .filter((item) => (item.table || 'resources') === activeTable)
-      .map((item) => item.group)
-      .filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b));
-  }, [activeTable, items]);
-
   const filteredItems = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return items.filter((item) => {
-      const itemTable = item.table || 'resources';
-      if (itemTable !== activeTable) return false;
-      if (groupFilter !== 'all' && item.group !== groupFilter) return false;
       if (statusFilter !== 'all' && item.status !== statusFilter) return false;
       if (!normalized) return true;
-      const haystack = [item.name, item.url, item.group, item.note, item.status, ...(item.tags || [])].join(' ').toLowerCase();
+      const haystack = [item.name, item.url, item.note, item.status, ...(item.tags || [])].join(' ').toLowerCase();
       return haystack.includes(normalized);
     });
-  }, [activeTable, groupFilter, items, query, statusFilter]);
+  }, [items, query, statusFilter]);
 
   const toggleNote = (id: string) => setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
 
@@ -162,32 +152,10 @@ export default function KeyUrlPublicTable() {
         </div>
 
         <div className="relative p-5 md:p-8">
-          <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl bg-white/45 dark:bg-slate-950/30 border border-white/50 dark:border-slate-800/70 p-2">
-            <button
-              onClick={() => setActiveTable('resources')}
-              className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'resources' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
-            >
-              中转站
-            </button>
-            <button
-              onClick={() => setActiveTable('lowend')}
-              className={`h-10 px-4 rounded-xl text-sm font-black transition-all ${activeTable === 'lowend' ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/20' : 'text-slate-500 hover:bg-white/60 dark:hover:bg-slate-900/60'}`}
-            >
-              备用 / 低端
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px_180px] gap-3 mb-5">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_180px] gap-3 mb-5">
             <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
               <Search size={17} className="text-slate-400" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-100 placeholder:text-slate-400" placeholder="搜索名称、分组、备注、标签" />
-            </label>
-            <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
-              <Filter size={17} className="text-slate-400" />
-              <select value={groupFilter} onChange={(event) => setGroupFilter(event.target.value)} className="w-full bg-transparent outline-none text-sm font-black text-slate-700 dark:text-slate-100">
-                <option value="all">全部分组</option>
-                {groups.map((group) => <option key={group} value={group}>{group}</option>)}
-              </select>
+              <input value={query} onChange={(event) => setQuery(event.target.value)} className="w-full bg-transparent outline-none text-sm font-bold text-slate-700 dark:text-slate-100 placeholder:text-slate-400" placeholder="搜索名称、备注或标签" />
             </label>
             <label className="h-12 bg-white/65 dark:bg-slate-900/65 border border-white/60 dark:border-slate-700 rounded-2xl px-4 flex items-center gap-3">
               <Star size={17} className="text-slate-400" />
@@ -205,12 +173,12 @@ export default function KeyUrlPublicTable() {
           </div>
 
           <div className="overflow-x-auto rounded-3xl border border-white/60 dark:border-slate-800/80 shadow-inner">
-            <table className="w-full min-w-[980px] border-collapse bg-white/30 dark:bg-slate-950/25">
+            <table className="w-full min-w-[900px] border-collapse bg-white/30 dark:bg-slate-950/25">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 bg-white/60 dark:bg-slate-950/55">
                   <th className="px-5 py-4 w-[220px]">名称</th>
-                  <th className="px-5 py-4 w-[170px]">分组</th>
                   <th className="px-5 py-4 w-[150px]">状态</th>
+                  <th className="px-5 py-4 w-[110px]">评分</th>
                   <th className="px-5 py-4 w-[190px]">标签</th>
                   <th className="px-5 py-4 w-[360px]">备注</th>
                   <th className="px-5 py-4 w-[120px]">入口</th>
@@ -229,10 +197,10 @@ export default function KeyUrlPublicTable() {
                   return (
                     <tr key={item.id} className="border-t border-white/60 dark:border-slate-800/70 align-top hover:bg-white/30 dark:hover:bg-white/[0.03] transition-colors">
                       <td className="px-5 py-4">
-                        <div className="font-black text-slate-800 dark:text-white">{item.name || item.group || '未命名中转站'}</div>
+                        <div className="font-black text-slate-800 dark:text-white">{item.name || '未命名中转站'}</div>
                       </td>
-                      <td className="px-5 py-4"><span className="inline-flex max-w-[160px] whitespace-nowrap rounded-xl bg-slate-900/5 dark:bg-white/5 px-3 py-1.5 text-xs font-black text-slate-600 dark:text-slate-300">{item.group || '未分组'}</span></td>
                       <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 whitespace-nowrap rounded-2xl border px-3 py-1.5 text-xs font-black ${status.className}`}><span className={`h-2 w-2 rounded-full shrink-0 ${status.dot}`} />{status.label}</span></td>
+                      <td className="px-5 py-4"><span className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl bg-amber-500/10 px-3 py-1.5 text-xs font-black text-amber-700 dark:text-amber-200"><Star size={13} />{getScore(item)} / 100</span></td>
                       <td className="px-5 py-4"><div className="flex flex-wrap gap-2 min-w-[150px]">{(item.tags || []).length ? item.tags.map((tag) => <span key={tag} className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-gradient-to-r from-indigo-500/15 to-fuchsia-500/15 dark:from-indigo-400/15 dark:to-fuchsia-400/15 px-3 py-1.5 text-xs font-black text-indigo-700 dark:text-indigo-200 border border-indigo-400/25 shadow-sm"><span className="text-indigo-400">#</span>{tag}</span>) : <span className="text-slate-400">暂无标签</span>}</div></td>
                       <td className={`px-5 py-4 ${item.markedFields?.includes('note') ? 'bg-amber-100/70 dark:bg-amber-400/10' : ''}`}><NoteCell item={item} /></td>
                       <td className="px-5 py-4">

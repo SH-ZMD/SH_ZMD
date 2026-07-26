@@ -2,15 +2,14 @@
   "items": [
     {
       "id": "56102b3a-9a1f-4bb7-b39c-930c36ff8520",
-      "table": "resources",
       "name": "WorldClawPro",
-      "url": "",
-      "group": "付费",
+      "url": "https://worldclawpro.ai/register?aff=weKt",
       "status": "active",
+      "score": 65,
       "tags": [
-        "0.04-0.06Pro"
+        "0.04-0.08"
       ],
-      "note": "真的吓哭了，0.06倍率的Pro，价格比市面底价低了快一半，我测过以后发现他的纯度竟然是市面上最高的（要知道除了官方我都没见过这么纯的站） 首字在三秒到十秒之间，还算不错哇https://worldclawpro.ai/register?aff=weKt",
+      "note": "0.04-0.08倍率的，价格算比较低，但目前好像有更低的了，而且这个不是那么稳定了，所以暂时不多推荐了， 首字在三秒到十秒之间，还算不错哇",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -20,19 +19,18 @@
         "message": "尚未检测"
       },
       "createdAt": 1782916593643,
-      "updatedAt": 1782918198975
+      "updatedAt": 1785087213643
     },
     {
       "id": "96e83640-cf1f-4c07-b1eb-d0bbec5b950e",
-      "table": "resources",
       "name": "蝶祈云",
-      "url": "",
-      "group": "付费",
+      "url": "https://www.dieqiyun.top/register?aff=NLECFTNWCJ77",
       "status": "active",
+      "score": 70,
       "tags": [
-        "0.05~0.12倍率"
+        "0.06~0.18倍率"
       ],
-      "note": "速度不错，首字也在两秒到六秒，主要有低价pro，0.1~0.12倍率的pro综合下来大概0.1元/M，而且群主很好（可爱）。随时在，出了问题随时修并随时给补偿https://www.dieqiyun.top/register?aff=NLECFTNWCJ77",
+      "note": "速度不错，首字也在两秒到六秒，有低价plus到低价pro，虽然价格不是最低的，但主要是稳，站长一直一直在维护，总有渠道是可以用的，建议量小的时候就考虑这个吧",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -42,41 +40,18 @@
         "message": "尚未检测"
       },
       "createdAt": 1782916219630,
-      "updatedAt": 1782918198975
-    },
-    {
-      "id": "54549f17-a032-4c5d-b10e-015e84b038e0",
-      "table": "resources",
-      "name": "Future",
-      "url": "",
-      "group": "纯公益",
-      "status": "active",
-      "tags": [
-        "签到"
-      ],
-      "note": "每天签到领取额度来使用模型，包含国内大多数模型和部分国外模型，但是例如gpt5.5和claude这种实际顶尖的模型基本上没有。尽管如此里面拥有的多种模型还是很有用的，例如gemini的text speech模型可以把文本转声音，或者gpt120b用来翻译文本，速度快且准确度高。\n总之如果有并不太严谨的项目要做，这个站点完全可以用来兜底，记得每天签到\n（注：需要用edu邮箱或者github账号注册）\nhttps://api.futureppo.top/register?aff=5bgD",
-      "markedFields": [],
-      "health": {
-        "state": "unknown",
-        "checkedAt": null,
-        "latencyMs": null,
-        "statusCode": null,
-        "message": "尚未检测"
-      },
-      "createdAt": 1782577338017,
-      "updatedAt": 1782918198975
+      "updatedAt": 1785087213643
     },
     {
       "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
-      "table": "resources",
       "name": "云舟AI",
-      "url": "",
-      "group": "付费+半公益",
+      "url": "https://cli.999554.xyz/register?aff=p95d",
       "status": "active",
+      "score": 70,
       "tags": [
-        "0.1倍率"
+        "0.08-0.1倍率"
       ],
-      "note": "速度超快，首字在两到四秒，其中也有部分模型0.01公益倍率（glm5.2）https://cli.999554.xyz/register?aff=p95d",
+      "note": "速度超快，首字在两到四秒，倍率较高但稳定性没得说，Code分组0.1倍率几乎没有断过",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -86,8 +61,92 @@
         "message": "尚未检测"
       },
       "createdAt": 1782575160414,
-      "updatedAt": 1782918198975
+      "updatedAt": 1785087213643
+    },
+    {
+      "id": "keyurl_1785086333867_rlito",
+      "name": "VIP",
+      "url": "https://vip.j3gb.com/register?aff=YRRNRQCDTFB5",
+      "status": "active",
+      "score": 85,
+      "tags": [
+        "0.06倍率"
+      ],
+      "note": "正常0.06倍率，但是活动比较多，很多时候会变成0.03倍率，最重要的是他的稳定性非常非常强！到现在来看可以说是最稳定的之一。\n不过缺点是你必须去注册一个Universe Federation站才能登陆（不过也很容易注册）,貌似不能用邮箱注册",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1785086333867,
+      "updatedAt": 1785087213643
+    },
+    {
+      "id": "keyurl_1785086335059_aq2mc",
+      "name": "AIhub",
+      "url": "https://aihub.top/register?aff=F7T8QVL9N72Y",
+      "status": "active",
+      "score": 95,
+      "tags": [
+        "0.01~0.2倍率"
+      ],
+      "note": "为什么说我目前最推荐的是这个站：首先他有二十多个不同的上游渠道（所以只要还有活着的可能他就还活着），其次对于不同倍率的渠道他有倍率从低到高自动切换的选项以及倍率限制。（简单来说就是我开一个key，选择0.01倍率，限制0.08倍率。如果这个0.01倍率的渠道死掉了他会自动找0.02倍率  没有的话0.03倍率 没有的话继续向上，但是一定不会找0.08倍率以上的倍率 ）  同时还有倍率回退机制，0.01活了的时候又会自动回到0.01倍率     而且！注册以后找群主送10刀，真真正正的十刀真的很良心了",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1785086335059,
+      "updatedAt": 1785087213643
+    },
+    {
+      "id": "keyurl_1785086722423_owpcx",
+      "name": "BizDecipher",
+      "url": "https://bizdecipher.com/register?aff=SCJYV3QETVZJ",
+      "status": "active",
+      "score": 70,
+      "tags": [
+        "0.05-0.2倍率"
+      ],
+      "note": "没啥好说的，倍率和稳定性都中规中矩，属于没有什么特别突出的",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1785086722423,
+      "updatedAt": 1785087213643
+    },
+    {
+      "id": "keyurl_1785087001559_fag1k",
+      "name": "Universe Federation公益",
+      "url": "https://api.wapq.cn/register?aff=CmA5",
+      "status": "active",
+      "score": 90,
+      "tags": [
+        "纯公益！！！纯公益！！！"
+      ],
+      "note": "注册应该也是要Universe Federation账号，建议去注册一个https://dc.hhhl.cc/。公益站，gpt偶尔能用，但是glm5.2和deepseekV4Pro的可用性和稳定性挺高的，需要这俩模型可以去看看。（再次声明：公益站不要测活！！！（包括但不限于问模型：hi/你是什么模型等等）测活是浪费资源，站主会很生气然后封号，适用于所有的公益站）",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1785087001559,
+      "updatedAt": 1785087213643
     }
   ],
-  "updatedAt": 1782918198975
+  "updatedAt": 1785087213643
 }

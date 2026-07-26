@@ -490,11 +490,10 @@ for (const check of interfaceChecks) {
 if (isManagerSource) {
   const settingsFile = 'app/settings/page.tsx';
   const settingsText = read(settingsFile);
-  const required = ["{ id: 'plans'", "{ id: 'recommendations'", 'mode="plans"', 'mode="recommendations"'];
+  const required = ["{ id: 'plans'", "{ id: 'recommendations'", "{ id: 'keyUrls'", 'mode="plans"', 'mode="recommendations"', 'KeyUrlTablesSection'];
   const forbidden = [
     'GallerySection',
     'DanmakuSection',
-    'KeyUrlSection',
     '图床配置管理',
     '全站弹幕设置',
     '中转站推荐表',
