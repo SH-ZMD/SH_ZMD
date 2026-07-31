@@ -254,7 +254,29 @@
       ],
       "createdAt": 1783098284110,
       "updatedAt": 1783098324991
+    },
+    {
+      "id": "group_1785125421670",
+      "name": "编程课程",
+      "description": "这里放所有我觉得和编程有关的教程，包括但不限于Python编程语言，JavaScrip框架 前后端等等网络代码类东西。AI时代会不会从零开始写代码变得没有那么重要，但知不知道你想让AI怎么干，按什么框架干仍然很重要",
+      "items": [
+        {
+          "id": "rec_1785125421670",
+          "title": "Python入门",
+          "description": "从这里大概学习Python的语法知识，能看懂代码就是目标",
+          "url": "https://www.freecodecamp.org/learn",
+          "imageUrl": "/image/pasted-1785125602264-03a843.webp",
+          "type": "course",
+          "tags": [],
+          "rating": 4,
+          "note": "Python",
+          "createdAt": 1785125421670,
+          "updatedAt": 1785125632279
+        }
+      ],
+      "createdAt": 1785125421670,
+      "updatedAt": 1785125531658
     }
   ],
-  "updatedAt": 1785038346833
+  "updatedAt": 1785125633908
 }
