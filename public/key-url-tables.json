@@ -19,18 +19,18 @@
         "message": "尚未检测"
       },
       "createdAt": 1782916593643,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
     },
     {
       "id": "96e83640-cf1f-4c07-b1eb-d0bbec5b950e",
       "name": "蝶祈云",
       "url": "https://www.dieqiyun.top/register?aff=NLECFTNWCJ77",
       "status": "active",
-      "score": 70,
+      "score": 65,
       "tags": [
         "0.06~0.18倍率"
       ],
-      "note": "速度不错，首字也在两秒到六秒，有低价plus到低价pro，虽然价格不是最低的，但主要是稳，站长一直一直在维护，总有渠道是可以用的，建议量小的时候就考虑这个吧",
+      "note": "速度不错，首字也在两秒到六秒，有低价plus到低价pro，虽然价格不是最低的，但主要是稳，站长一直一直在维护，总有渠道是可以用的，建议量小的时候就考虑这个吧（不过缓存率较低，还是有点贵）",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -40,7 +40,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1782916219630,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
     },
     {
       "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
@@ -61,7 +61,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1782575160414,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
     },
     {
       "id": "keyurl_1785086333867_rlito",
@@ -82,7 +82,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1785086333867,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
     },
     {
       "id": "keyurl_1785086335059_aq2mc",
@@ -103,28 +103,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1785086335059,
-      "updatedAt": 1785473671775
-    },
-    {
-      "id": "keyurl_1785086722423_owpcx",
-      "name": "BizDecipher",
-      "url": "https://bizdecipher.com/register?aff=SCJYV3QETVZJ",
-      "status": "active",
-      "score": 70,
-      "tags": [
-        "0.05-0.2倍率"
-      ],
-      "note": "没啥好说的，倍率和稳定性都中规中矩，属于没有什么特别突出的",
-      "markedFields": [],
-      "health": {
-        "state": "unknown",
-        "checkedAt": null,
-        "latencyMs": null,
-        "statusCode": null,
-        "message": "尚未检测"
-      },
-      "createdAt": 1785086722423,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
     },
     {
       "id": "keyurl_1785087001559_fag1k",
@@ -145,7 +124,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1785087001559,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
     },
     {
       "id": "keyurl_1785473606842_vb1vc",
@@ -166,8 +145,29 @@
         "message": "尚未检测"
       },
       "createdAt": 1785473606842,
-      "updatedAt": 1785473671775
+      "updatedAt": 1785904871018
+    },
+    {
+      "id": "keyurl_1785902198583_8hiq7",
+      "name": "API分发中转",
+      "url": "https://code2alita.com/register?aff=ZRVP73PJDCUM",
+      "status": "active",
+      "score": 80,
+      "tags": [
+        "生图站"
+      ],
+      "note": "正常倍率Pro 0.25  不是很建议用 有点贵。但是好处在于他的生图！首先一般的生图1K 2K 4K都是3分左右。但是他有专门的分组high quality 4K 8分（简单来说就是细节好，一般的image2生图图片中如果有很多文字 容易变成乱码  但是这个会尽量保证文字清晰）",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1785902198583,
+      "updatedAt": 1785904871018
     }
   ],
-  "updatedAt": 1785473671775
+  "updatedAt": 1785904871018
 }
