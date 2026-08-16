@@ -35,6 +35,20 @@ const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_COMMENT_IMAGES = 3;
 const MAX_CONTENT_LENGTH = 2000;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const COMMENT_REQUEST_TIMEOUT_MS = 12000;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), COMMENT_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error('评论服务响应超时，请稍后重试。');
+    throw error;
+  } finally {
+    window.clearTimeout(timer);
+  }
+}
 
 async function readJsonSafely(res: Response) {
   const text = await res.text();
@@ -47,7 +61,7 @@ async function readJsonSafely(res: Response) {
 }
 
 async function fetchProductionComments(pageId: string) {
-  const remoteRes = await fetch(`${PRODUCTION_COMMENT_API}?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
+  const remoteRes = await fetchWithTimeout(`${PRODUCTION_COMMENT_API}?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
   const remoteData = await readJsonSafely(remoteRes);
   if (remoteRes.ok && Array.isArray(remoteData.comments)) return remoteData.comments as CommentItem[];
   return [];
@@ -64,7 +78,7 @@ async function uploadCommentImage(file: File, turnstileToken: string) {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('turnstileToken', turnstileToken);
-  const res = await fetch('/api/comment-images', { method: 'POST', body: formData });
+  const res = await fetchWithTimeout('/api/comment-images', { method: 'POST', body: formData });
   const data = await readJsonSafely(res);
   if (!res.ok || !data.url) throw new Error(data.error || '图片上传失败。');
   return {
@@ -152,7 +166,7 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch(`/api/comments?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
+      const res = await fetchWithTimeout(`/api/comments?pageId=${encodeURIComponent(pageId)}`, { cache: 'no-store' });
       const data = await readJsonSafely(res);
       if (!res.ok) throw new Error(data.error || '评论读取失败。');
       if (Array.isArray(data.comments)) {
@@ -272,7 +286,7 @@ export default function Comments({ pageId: explicitPageId, compact = false, clas
       });
       let data = await readJsonSafely(res);
       if (!res.ok) {
-        const remoteRes = await fetch(PRODUCTION_COMMENT_API, {
+        const remoteRes = await fetchWithTimeout(PRODUCTION_COMMENT_API, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),

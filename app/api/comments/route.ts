@@ -232,6 +232,12 @@ function githubHeaders(write = false, token = TOKEN) {
   return headers;
 }
 
+function githubApiError(data: any, status: number, fallback: string) {
+  if (status === 401) return '评论服务的 GitHub 写入凭据已失效，请在 Vercel 更新 COMMENT_GITHUB_TOKEN。';
+  if (status === 403) return '评论服务没有 GitHub 仓库写入权限，请检查 COMMENT_GITHUB_TOKEN 的 repo 权限。';
+  return data?.message || fallback;
+}
+
 async function findIssue(pageId: string) {
   const title = issueTitle(pageId);
   const query = encodeURIComponent(`repo:${OWNER}/${REPO} in:title "${title}" type:issue`);
@@ -261,7 +267,7 @@ async function createIssue(pageId: string, token = TOKEN) {
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.message || '创建评论箱失败。');
+  if (!res.ok) throw new Error(githubApiError(data, res.status, '创建评论箱失败。'));
   return data;
 }
 
@@ -519,7 +525,7 @@ async function patchGithubComment(commentId: string, comment: StoredComment, tok
     body: JSON.stringify({ body: serializeComment(comment) }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || '更新评论失败。');
+  if (!res.ok) throw new Error(githubApiError(data, res.status, '更新评论失败。'));
   return data;
 }
 
@@ -530,7 +536,7 @@ async function deleteGithubComment(commentId: string, token: string) {
   });
   if (res.status === 204) return;
   const data = await res.json().catch(() => ({}));
-  throw new Error(data.message || '删除评论失败。');
+  throw new Error(githubApiError(data, res.status, '删除评论失败。'));
 }
 
 function parseImages(value: unknown): CommentImage[] {
@@ -657,7 +663,10 @@ export async function POST(req: Request) {
     });
     const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) return proxyProductionComments(req, { method: 'POST', body: bodyText });
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) throw new Error(githubApiError(data, res.status, '评论写入失败。'));
+      return proxyProductionComments(req, { method: 'POST', body: bodyText });
+    }
 
     const saved = {
       ...draft,

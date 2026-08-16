@@ -5,11 +5,11 @@
       "name": "WorldClawPro",
       "url": "https://worldclawpro.ai/register?aff=weKt",
       "status": "active",
-      "score": 65,
+      "score": 60,
       "tags": [
-        "0.04-0.08"
+        "0.08"
       ],
-      "note": "0.04-0.08倍率的，价格算比较低，但目前好像有更低的了，而且这个不是那么稳定了，所以暂时不多推荐了， 首字在三秒到十秒之间，还算不错哇",
+      "note": "价格：0.08倍率，缓存率还可以，总体中规中矩\n速度：70\n稳定性：70",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -19,18 +19,18 @@
         "message": "尚未检测"
       },
       "createdAt": 1782916593643,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "96e83640-cf1f-4c07-b1eb-d0bbec5b950e",
       "name": "蝶祈云",
       "url": "https://www.dieqiyun.top/register?aff=NLECFTNWCJ77",
       "status": "active",
-      "score": 65,
+      "score": 70,
       "tags": [
         "0.06~0.18倍率"
       ],
-      "note": "速度不错，首字也在两秒到六秒，有低价plus到低价pro，虽然价格不是最低的，但主要是稳，站长一直一直在维护，总有渠道是可以用的，建议量小的时候就考虑这个吧（不过缓存率较低，还是有点贵）",
+      "note": "价格：0.1左右，缓存率有点低，价格有点高\n速度：80\n稳定性：90",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -40,7 +40,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1782916219630,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
@@ -51,7 +51,7 @@
       "tags": [
         "0.08-0.1倍率"
       ],
-      "note": "速度超快，首字在两到四秒，倍率较高但稳定性没得说，Code分组0.1倍率几乎没有断过",
+      "note": "价格：0.08或0.1，缓存率一般，总体中规中矩\n速度：75\n稳定性：70",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -61,18 +61,18 @@
         "message": "尚未检测"
       },
       "createdAt": 1782575160414,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "keyurl_1785086333867_rlito",
       "name": "VIP",
       "url": "https://vip.j3gb.com/register?aff=YRRNRQCDTFB5",
       "status": "active",
-      "score": 85,
+      "score": 70,
       "tags": [
         "0.06倍率"
       ],
-      "note": "正常0.06倍率，但是活动比较多，很多时候会变成0.03倍率，最重要的是他的稳定性非常非常强！到现在来看可以说是最稳定的之一。\n不过缺点是你必须去注册一个Universe Federation站才能登陆（不过也很容易注册）,貌似不能用邮箱注册",
+      "note": "价格：0.06倍率（但目前0.1），缓存率不错，总体中规中矩\n速度：80\n稳定性：80",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -82,18 +82,18 @@
         "message": "尚未检测"
       },
       "createdAt": 1785086333867,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "keyurl_1785086335059_aq2mc",
       "name": "AIhub",
       "url": "https://aihub.top/register?aff=F7T8QVL9N72Y",
       "status": "active",
-      "score": 95,
+      "score": 70,
       "tags": [
         "0.01~0.2倍率"
       ],
-      "note": "为什么说我目前最推荐的是这个站：首先他有二十多个不同的上游渠道（所以只要还有活着的可能他就还活着），其次对于不同倍率的渠道他有倍率从低到高自动切换的选项以及倍率限制。（简单来说就是我开一个key，选择0.01倍率，限制0.08倍率。如果这个0.01倍率的渠道死掉了他会自动找0.02倍率  没有的话0.03倍率 没有的话继续向上，但是一定不会找0.08倍率以上的倍率 ）  同时还有倍率回退机制，0.01活了的时候又会自动回到0.01倍率     而且！注册以后找群主送10刀，真真正正的十刀真的很良心了",
+      "note": "价格：0.05~0.15 价格多，缓存率公开，总体较低\n速度：70\n稳定性：60",
       "markedFields": [],
       "health": {
         "state": "unknown",
@@ -103,14 +103,14 @@
         "message": "尚未检测"
       },
       "createdAt": 1785086335059,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "keyurl_1785087001559_fag1k",
       "name": "Universe Federation公益",
       "url": "https://api.wapq.cn/register?aff=CmA5",
       "status": "active",
-      "score": 90,
+      "score": 70,
       "tags": [
         "纯公益！！！纯公益！！！"
       ],
@@ -124,7 +124,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1785087001559,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "keyurl_1785473606842_vb1vc",
@@ -145,7 +145,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1785473606842,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
     },
     {
       "id": "keyurl_1785902198583_8hiq7",
@@ -154,7 +154,7 @@
       "status": "active",
       "score": 80,
       "tags": [
-        "生图站"
+        "生图站（有high quality生图）"
       ],
       "note": "正常倍率Pro 0.25  不是很建议用 有点贵。但是好处在于他的生图！首先一般的生图1K 2K 4K都是3分左右。但是他有专门的分组high quality 4K 8分（简单来说就是细节好，一般的image2生图图片中如果有很多文字 容易变成乱码  但是这个会尽量保证文字清晰）",
       "markedFields": [],
@@ -166,8 +166,29 @@
         "message": "尚未检测"
       },
       "createdAt": 1785902198583,
-      "updatedAt": 1785904871018
+      "updatedAt": 1786553673598
+    },
+    {
+      "id": "keyurl_1786553558783_pfo68",
+      "name": "sharedchat",
+      "url": "https://new.sharedchat.cc/list/#/register?i=F2uFW",
+      "status": "active",
+      "score": 70,
+      "tags": [
+        "公益站，需每天换key，仅能在codex中使用"
+      ],
+      "note": "每天登录充值50刀，但是每天key都要手动换，而且只能在codex中用，并且要和很多人抢每日总额度，总之比较适合不紧急的任务",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1786553558783,
+      "updatedAt": 1786553673598
     }
   ],
-  "updatedAt": 1785904871018
+  "updatedAt": 1786553673598
 }

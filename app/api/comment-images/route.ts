@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
+import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { getRequestIp, protectPublicMutation } from '../../../lib/abuseProtection';
+import { promisify } from 'node:util';
 
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
@@ -11,6 +13,7 @@ const PRODUCTION_COMMENT_IMAGE_API = process.env.PRODUCTION_COMMENT_IMAGE_API ||
 const RELEASE_TAG = process.env.COMMENT_IMAGE_RELEASE_TAG || 'comment-images';
 const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const execFileAsync = promisify(execFile);
 
 export const runtime = 'nodejs';
 
@@ -59,6 +62,14 @@ async function getWriteToken() {
     if (localToken) return localToken;
   } catch {
     // Local env file is optional.
+  }
+
+  try {
+    const { stdout } = await execFileAsync('gh', ['auth', 'token'], { windowsHide: true, timeout: 5000 });
+    const ghToken = stdout.trim();
+    if (ghToken) return ghToken;
+  } catch {
+    // GitHub CLI is optional.
   }
 
   return '';
