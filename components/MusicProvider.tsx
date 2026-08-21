@@ -235,6 +235,29 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 批量接口：一次请求拉全歌单（服务端直连网易云），失败返回空数组走逐首补位
+  const fetchCloudPlaylist = useCallback(async (ids: string[]): Promise<Song[]> => {
+    if (ids.length === 0) return [];
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 10000);
+    try {
+      const res = await fetch(`/api/music?ids=${ids.join(',')}`, {
+        signal: controller.signal,
+        cache: 'no-store',
+      });
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (!Array.isArray(data)) return [];
+      return data
+        .filter((song: any) => song && song.url && !song.error)
+        .map((song: any) => normalizeSong(song, String(song.id)));
+    } catch {
+      return [];
+    } finally {
+      window.clearTimeout(timer);
+    }
+  }, []);
+
   const ensurePlaylistReady = useCallback(async () => {
     if (loadingPromiseRef.current) return loadingPromiseRef.current;
 
@@ -245,12 +268,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       setCurrentLyric('Music ready');
 
       try {
-        const cloudIds = siteConfig.cloudMusicIds || [];
-        const cloudResults = await Promise.allSettled(
-          cloudIds.map((id) => fetchCloudSong(String(id)))
-        );
-        const cloudPlaylist = cloudResults
+        const cloudIds = (siteConfig.cloudMusicIds || []).map(String);
+        const batchPlaylist = await fetchCloudPlaylist(cloudIds);
+        const resolvedIds = new Set(batchPlaylist.map((song) => String(song.id)));
+        const missingIds = cloudIds.filter((id) => !resolvedIds.has(id));
+        const gapResults = await Promise.allSettled(missingIds.map((id) => fetchCloudSong(id)));
+        const gapPlaylist = gapResults
           .map((result) => (result.status === 'fulfilled' ? result.value : null))
+          .filter((song): song is Song => Boolean(song?.src));
+        const mergedCloud = [...batchPlaylist, ...gapPlaylist];
+        // 按 siteConfig 里的歌曲顺序输出，保持歌单展示顺序不变
+        const cloudPlaylist = cloudIds
+          .map((id) => mergedCloud.find((song) => String(song.id) === id))
           .filter((song): song is Song => Boolean(song?.src));
         const fallbackPlaylist = playlistRef.current.length > 0
           ? playlistRef.current
@@ -271,7 +300,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     })();
 
     return loadingPromiseRef.current;
-  }, [fetchCloudSong]);
+  }, [fetchCloudSong, fetchCloudPlaylist]);
 
   useEffect(() => {
     if (pathname === '/music') {
