@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkLocalRateLimit, getRequestIp } from '../../../../lib/abuseProtection';
 
 const METING_APIS = [
   'https://meting-api.saop.cc/api',
@@ -68,6 +69,15 @@ export async function GET(req: Request) {
 
   if (!/^\d+$/.test(id)) {
     return NextResponse.json({ error: '歌曲 ID 不正确' }, { status: 400 });
+  }
+
+  // 轻量防刷：同 IP 每分钟最多 40 次解析，避免第三方音源 API 配额被滥用
+  const waitSeconds = checkLocalRateLimit('music-resolve', getRequestIp(req), 40, 60);
+  if (waitSeconds > 0) {
+    return NextResponse.json(
+      { error: '解析请求过于频繁，请稍后再试。' },
+      { status: 429, headers: { 'Retry-After': String(waitSeconds) } }
+    );
   }
 
   for (const api of METING_APIS) {

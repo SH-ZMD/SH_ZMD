@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { execFile, spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -48,7 +48,8 @@ const execFileAsync = promisify(execFile);
 export const runtime = 'nodejs';
 
 function normalizePageId(pageId: string) {
-  const clean = String(pageId || '/').trim().replace(/\s+/g, '-').slice(0, 140);
+  // 引号会破坏 GitHub 搜索语句里的标题匹配边界，直接剔除
+  const clean = String(pageId || '/').trim().replace(/\s+/g, '-').replace(/"/g, '').slice(0, 140);
   return clean || '/';
 }
 
@@ -85,10 +86,17 @@ function isLocalRequest(req: Request) {
   return host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
 }
 
+function secureTokenMatch(provided: string, expected: string) {
+  if (!expected || !provided) return false;
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+  return providedBuffer.length === expectedBuffer.length && timingSafeEqual(providedBuffer, expectedBuffer);
+}
+
 function hasCommentAdminAccess(req: Request) {
-  if (isLocalRequest(req)) return true;
-  const providedToken = req.headers.get('x-comment-admin-token') || '';
-  return Boolean(COMMENT_ADMIN_TOKEN && providedToken === COMMENT_ADMIN_TOKEN);
+  // 部署在 Vercel 上时不信任转发 Host 头（可被伪造），只认管理 Token
+  if (!process.env.VERCEL_ENV && isLocalRequest(req)) return true;
+  return secureTokenMatch(req.headers.get('x-comment-admin-token') || '', COMMENT_ADMIN_TOKEN);
 }
 
 function canProxyProductionComments(req: Request) {
@@ -119,6 +127,11 @@ function checkRateLimit(req: Request) {
   }
   previous.push(now);
   requestWindows.set(key, previous);
+  if (requestWindows.size > 5000) {
+    for (const [mapKey, timestamps] of requestWindows) {
+      if (timestamps.every((time) => now - time >= COMMENT_WINDOW_MS)) requestWindows.delete(mapKey);
+    }
+  }
   return 0;
 }
 
@@ -353,6 +366,7 @@ function normalizeStoredComment(value: Partial<StoredComment>, pageId: string, f
           thumbnailUrl: image.thumbnailUrl ? String(image.thumbnailUrl).trim() : undefined,
           alt: image.alt ? String(image.alt).slice(0, 80) : undefined,
         }))
+        .filter((image) => /^https?:\/\//i.test(image.url) || image.url.startsWith('/comment-images/'))
         .slice(0, 3)
     : [];
 
@@ -488,11 +502,13 @@ async function proxyProductionComments(req: Request, init?: RequestInit) {
   } catch (error) {
     if (init?.method && init.method !== 'GET') throw error;
 
+    // PowerShell 单引号字符串不做子表达式插值，只把 ' 转义为 ''，防止查询串里的 $(...) 注入
+    const psSafeUrl = targetUrl.replace(/'/g, "''");
     const script = [
       "$ProgressPreference = 'SilentlyContinue'",
       '$wc = New-Object System.Net.WebClient',
       "$wc.Headers.Add('User-Agent', 'my-blog-manager')",
-      `$bytes = $wc.DownloadData(${JSON.stringify(targetUrl)})`,
+      `$bytes = $wc.DownloadData('${psSafeUrl}')`,
       '[Convert]::ToBase64String($bytes)',
     ].join('; ');
     const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-Command', script], {

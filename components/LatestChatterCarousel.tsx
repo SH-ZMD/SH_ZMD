@@ -68,12 +68,13 @@ export default function LatestChatterCarousel({ chatters }: { chatters: any[] })
 
       {chatters.length > 1 && (
         <div className="absolute bottom-5 right-6 z-30 flex gap-2">
-          {chatters.map((_, i) => (
+          {chatters.map((chatter, i) => (
             <button
               key={i}
               onClick={(e) => { e.stopPropagation(); setCurrentIndex(i); }}
               className={`h-1.5 rounded-full transition-all duration-500 shadow-sm ${i === currentIndex ? 'w-6 bg-indigo-400' : 'w-2 bg-white/40 hover:bg-white/80'}`}
-              aria-label={`跳转`}
+              aria-label={`切换到杂谈：${chatter.title}`}
+              aria-current={i === currentIndex ? 'true' : undefined}
             />
           ))}
         </div>

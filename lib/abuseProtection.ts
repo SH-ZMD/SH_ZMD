@@ -25,7 +25,19 @@ function localRateLimit(rule: RateRule) {
   const windowMs = rule.windowSeconds * 1000;
   const active = (localWindows.get(key) || []).filter((timestamp) => now - timestamp < windowMs);
   if (active.length >= rule.limit) return Math.max(1, Math.ceil((windowMs - (now - active[0])) / 1000));
-  active.push(now); localWindows.set(key, active); return 0;
+  active.push(now); localWindows.set(key, active);
+  if (localWindows.size > 5000) {
+    const maxWindow = 24 * 60 * 60 * 1000;
+    for (const [mapKey, timestamps] of localWindows) {
+      if (timestamps.every((timestamp) => now - timestamp >= maxWindow)) localWindows.delete(mapKey);
+    }
+  }
+  return 0;
+}
+
+// 供 GET 类只读接口使用的轻量限流：不做人机验证，返回需等待的秒数（0 表示放行）
+export function checkLocalRateLimit(name: string, identity: string, limit: number, windowSeconds: number) {
+  return localRateLimit({ name, identity, limit, windowSeconds });
 }
 async function durableRateLimit(rule: RateRule) {
   const url = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '').replace(/\/$/, '');
