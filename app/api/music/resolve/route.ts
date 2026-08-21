@@ -7,7 +7,7 @@ const METING_APIS = [
   'https://meting-api.9887665.xyz/api',
   'https://api.injahow.cn/meting/',
 ];
-const PRODUCTION_MUSIC_API = 'https://sh-zmd.vercel.app/api/music/resolve';
+const PRODUCTION_MUSIC_API = 'https://5487210.xyz/api/music/resolve';
 
 function normalizeSong(song: any, id: string) {
   return {

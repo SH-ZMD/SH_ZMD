@@ -9,7 +9,7 @@ import { promisify } from 'node:util';
 const OWNER = process.env.COMMENT_REPO_OWNER || 'SH-ZMD';
 const REPO = process.env.COMMENT_REPO || 'SH_ZMD';
 const TOKEN = process.env.COMMENT_GITHUB_TOKEN || process.env.GITHUB_COMMENT_TOKEN || '';
-const PRODUCTION_COMMENT_IMAGE_API = process.env.PRODUCTION_COMMENT_IMAGE_API || 'https://sh-zmd.vercel.app/api/comment-images';
+const PRODUCTION_COMMENT_IMAGE_API = process.env.PRODUCTION_COMMENT_IMAGE_API || 'https://5487210.xyz/api/comment-images';
 const RELEASE_TAG = process.env.COMMENT_IMAGE_RELEASE_TAG || 'comment-images';
 const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);

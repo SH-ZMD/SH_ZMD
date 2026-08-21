@@ -1,6 +1,6 @@
 // siteConfig.ts - 你的全站“控制中心”
 
-const primarySiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://sh-zmd.vercel.app";
+const primarySiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://5487210.xyz";
 
 export const siteConfig = {
   siteUrl: primarySiteUrl,
