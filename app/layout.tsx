@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteConfig.siteUrl),
   title: siteConfig.title,
   description: siteConfig.bio,
-  alternates: { canonical: '/' },
-  openGraph: { type: 'website', locale: 'zh_CN', url: '/', siteName: siteConfig.title, title: siteConfig.title, description: siteConfig.bio, images: [{ url: siteConfig.avatarUrl, alt: siteConfig.authorName }] },
-  twitter: { card: 'summary_large_image', title: siteConfig.title, description: siteConfig.bio, images: [siteConfig.avatarUrl] },
+  alternates: { canonical: '/', types: { 'application/rss+xml': '/rss.xml' } },
+  openGraph: { type: 'website', locale: 'zh_CN', url: '/', siteName: siteConfig.title, title: siteConfig.title, description: siteConfig.bio, images: [{ url: '/bg/og-card.jpg', width: 1200, height: 630, alt: siteConfig.title }] },
+  twitter: { card: 'summary_large_image', title: siteConfig.title, description: siteConfig.bio, images: ['/bg/og-card.jpg'] },
   icons: {
     icon: siteConfig.faviconUrl,
     apple: siteConfig.faviconUrl,

@@ -4,6 +4,7 @@ import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import ArchiveCollectionsClient from '../../components/ArchiveCollectionsClient';
 import Comments from '../../components/Comments';
+import { siteConfig } from '../../siteConfig';
 
 function readArchiveCollections() {
   try {
@@ -14,6 +15,11 @@ function readArchiveCollections() {
     return [];
   }
 }
+
+export const metadata = {
+  title: `归档 | ${siteConfig.title}`,
+  description: "文章、杂谈与说说的完整时间线归档",
+};
 
 export default function Timeline() {
   const collections = readArchiveCollections();
