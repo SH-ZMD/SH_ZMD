@@ -1,3 +1,5 @@
+import 'katex/dist/katex.min.css';
+
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
