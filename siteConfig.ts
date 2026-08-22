@@ -25,13 +25,13 @@ export const siteConfig = {
   useGradient: false,
   themeColors: ["#a18cd1", "#fbc2eb", "#a1c4fd", "#c2e9fb"], // 呼吸流动的颜色组合
 // 修改这里：变成图片数组
-  bgImages: ["https://bu.dusays.com/2026/03/24/69c1e38b4c370.jpg", "https://bu.dusays.com/2026/03/24/69c26fe4acdb5.jpg", "https://bu.dusays.com/2026/03/24/69c26fe4d9486.jpg"],
+  bgImages: ["/bg/home-1.webp", "/bg/home-2.webp", "/bg/home-3.webp"],
 
   // 4. 文章默认封面图 (当 Markdown 没写 cover 时显示)
-  defaultPostCover: "https://bu.dusays.com/2026/03/24/69c1e38b346cb.jpg",
+  defaultPostCover: "/bg/cover.webp",
 
   // 5. 首页照片墙预览图
-  photoWallImage: "https://bu.dusays.com/2026/03/24/69c1e38b4c370.jpg",
+  photoWallImage: "/bg/home-1.webp",
   cloudMusicIds: ["1809646618", "3361076230", "2162204930", "2738459901", "2145853736", "1955725942", "2036965945", "2132012055"],
   customMusic: [],
   social: {

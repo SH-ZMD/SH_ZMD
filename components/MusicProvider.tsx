@@ -55,7 +55,7 @@ interface MusicContextType {
 }
 
 const MusicContext = createContext<MusicContextType | null>(null);
-const DEFAULT_COVER = 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg';
+const DEFAULT_COVER = '/bg/music-default.webp';
 const musicSignature = JSON.stringify({
   ids: siteConfig.cloudMusicIds || [],
   customMusic: ((siteConfig as any).customMusic || []).map((song: any) => ({

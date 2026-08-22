@@ -9,7 +9,8 @@
     "lint": "eslint",
     "health": "node scripts/health-check.mjs",
     "optimize:images": "node scripts/optimize-images.mjs",
-    "check": "npm run lint && npm run health && npm run build && npm audit --omit=dev --audit-level=high"
+    "check": "npm run lint && npm run health && npm run build && npm audit --omit=dev --audit-level=high",
+    "slim:assets": "node scripts/slim-assets.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.7",

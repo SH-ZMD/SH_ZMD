@@ -32,6 +32,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="zh-CN" className="h-full antialiased" suppressHydrationWarning>
       <head>
+        {/* 首屏背景图走 CSS background 不会自动预加载，这里显式提前拉取 */}
+        <link rel="preload" as="image" href={(siteConfig.bgImages || [])[0] || '/bg/home-1.webp'} />
         <style
           suppressHydrationWarning
           dangerouslySetInnerHTML={{

@@ -14,7 +14,7 @@ function normalizeSong(song: any, id: string) {
     id: String(song.id || id),
     title: song.name || song.title || '未知歌曲',
     artist: song.author || song.artist || '未知歌手',
-    cover: song.pic || song.cover || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
+    cover: song.pic || song.cover || '/bg/music-default.webp',
     src: song.url || song.src || '',
     lrcUrl: song.lrc || song.lrcUrl || '',
   };
