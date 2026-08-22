@@ -9,7 +9,7 @@ interface Petal {
   delay: number;
 }
 
-export default function Sakura() {
+export default function Sakura({ paused = false }: { paused?: boolean }) {
   const [petals, setPetals] = useState<Petal[]>([]);
 
   useEffect(() => {
@@ -46,6 +46,7 @@ export default function Sakura() {
             borderRadius: '100% 0 100% 0',
             animation: `sakuraFall ${p.duration}s linear infinite`,
             animationDelay: `${p.delay}s`,
+            animationPlayState: paused ? 'paused' : undefined,
           }}
         ></div>
       ))}

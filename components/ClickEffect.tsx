@@ -62,10 +62,16 @@ export default function ClickEffect() {
 
     const handleClick = (e: MouseEvent) => {
       ripples.push(new Ripple(e.clientX, e.clientY));
+      // 按需启动动画循环：有涟漪才跑，空闲时不消耗 CPU
+      if (!running) {
+        running = true;
+        requestAnimationFrame(animate);
+      }
     };
 
     window.addEventListener('click', handleClick);
 
+    let running = false;
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -81,13 +87,21 @@ export default function ClickEffect() {
           i--;
         }
       }
-      requestAnimationFrame(animate);
+
+      if (ripples.length > 0) {
+        requestAnimationFrame(animate);
+      } else {
+        // 涟漪全部消散：最后清一次画布并停止循环
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        running = false;
+      }
     };
-    animate();
 
     return () => {
       window.removeEventListener('resize', resize);
       window.removeEventListener('click', handleClick);
+      running = false;
+      ripples = [];
     };
   }, []);
 

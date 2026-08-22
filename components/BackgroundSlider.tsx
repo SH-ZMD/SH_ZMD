@@ -52,16 +52,26 @@ export default function BackgroundSlider() {
 
   if (!currentImage) return null;
 
+  // 交叉淡入淡出：底层保留上一张图，新图作为上层用 CSS 动画淡入覆盖
+  // （动画在挂载时自动播放，避免 transition 因重挂载直接跳到终态的问题）
+  const previousImage = images[(index - 1 + images.length) % images.length] || '';
+
+  const layerStyle = (image: string) => ({
+    backgroundImage: `url(${image})`,
+    backgroundSize: 'cover' as const,
+    backgroundPosition: 'center' as const,
+  });
+
   return (
     <div className="absolute inset-0 z-[-10] overflow-hidden">
+      <style>{`@keyframes bgFadeIn { from { opacity: 0; } to { opacity: 1; } }`}</style>
+      {previousImage && previousImage !== currentImage && (
+        <div className="absolute inset-0 transform-gpu" style={layerStyle(previousImage)} />
+      )}
       <div
         key={currentImage}
-        className="absolute inset-0 transition-opacity duration-700 ease-out transform-gpu"
-        style={{
-          backgroundImage: `url(${currentImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
+        className="absolute inset-0 transform-gpu"
+        style={{ ...layerStyle(currentImage), animation: 'bgFadeIn 700ms ease-out both' }}
       />
     </div>
   );

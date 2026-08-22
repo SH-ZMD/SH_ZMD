@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,7 +9,11 @@ import {Beaker, Rocket, Trees, Wrench} from 'lucide-react'; // 🌟 暂时移除
 import { siteConfig } from '../../siteConfig'; // 🌟 引入站点配置
 
 import AlchemyLab from './AlchemyLab';
-import DijiangModel from './DijiangModel';
+// three.js 模型约 1MB，只在切到模型视图时才下载
+const DijiangModel = dynamic(() => import('./DijiangModel'), {
+  ssr: false,
+  loading: () => null,
+});
 // import OperatorRecreation from './OperatorRecreation'; // 🌟 先注释掉，以后需要随时可以加回来
 
 export default function CreativeWorkshopClient({ posts = [], chatters = [], moments = [] }: any) {
