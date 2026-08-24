@@ -30,7 +30,7 @@ type CommentsProps = {
   className?: string;
 };
 
-const PRODUCTION_COMMENT_API = 'https://5487210.xyz/api/comments';
+const PRODUCTION_COMMENT_API = 'https://sh-zmd.vercel.app/api/comments';
 const MAX_COMMENT_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_COMMENT_IMAGES = 3;
 const MAX_CONTENT_LENGTH = 2000;

@@ -43,8 +43,6 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
   const offsetRef = useRef({ x: 0, y: 0 });
   const animFrameRef = useRef<number>(0);
   const [hoveredStar, setHoveredStar] = useState<RenderStar | null>(null);
-  const hoveredStarRef = useRef<RenderStar | null>(null);
-  const lastTooltipPosRef = useRef({ x: 0, y: 0 });
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [dims, setDims] = useState({ w: 1200, h: 800 });
   const [isEmpty, setIsEmpty] = useState(false);
@@ -126,32 +124,15 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
 
     let time = 0;
 
-    // 背景渐变几何固定，只随尺寸变化重建，不必每帧新建
-    const bgGrad = ctx.createRadialGradient(dims.w / 2, dims.h / 2, 0, dims.w / 2, dims.h / 2, Math.max(dims.w, dims.h) * 0.7);
-    bgGrad.addColorStop(0, 'rgba(15, 15, 35, 1)');
-    bgGrad.addColorStop(0.5, 'rgba(8, 8, 25, 1)');
-    bgGrad.addColorStop(1, 'rgba(3, 3, 15, 1)');
-
-    // 星点光晕渐变按颜色缓存（单位圆渐变 + translate/scale 复用），
-    // 强度变化用 globalAlpha 表达，避免每颗星每帧 createRadialGradient
-    const glowGrads = new Map<string, CanvasGradient>();
-    const getGlowGrad = (color: string) => {
-      let grad = glowGrads.get(color);
-      if (!grad) {
-        grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
-        grad.addColorStop(0, `rgba(${color}, 0.8)`);
-        grad.addColorStop(0.4, `rgba(${color}, 0.2)`);
-        grad.addColorStop(1, `rgba(${color}, 0)`);
-        glowGrads.set(color, grad);
-      }
-      return grad;
-    };
-
     const draw = () => {
       time += 0.016;
       ctx.clearRect(0, 0, dims.w, dims.h);
 
       // 深色背景渐变
+      const bgGrad = ctx.createRadialGradient(dims.w / 2, dims.h / 2, 0, dims.w / 2, dims.h / 2, Math.max(dims.w, dims.h) * 0.7);
+      bgGrad.addColorStop(0, 'rgba(15, 15, 35, 1)');
+      bgGrad.addColorStop(0.5, 'rgba(8, 8, 25, 1)');
+      bgGrad.addColorStop(1, 'rgba(3, 3, 15, 1)');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, dims.w, dims.h);
 
@@ -213,16 +194,15 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
         const radius = star.baseRadius * twinkle * (1 + star.glowIntensity * 0.8);
         const glowRadius = radius * (3 + star.glowIntensity * 5);
 
-        // 外发光：复用按颜色缓存的单位渐变，translate/scale 定位，强度走 globalAlpha
-        ctx.save();
-        ctx.translate(sx, sy);
-        ctx.scale(glowRadius, glowRadius);
-        ctx.globalAlpha = 0.5 + star.glowIntensity * 0.5;
-        ctx.fillStyle = getGlowGrad(star.color);
+        // 外发光
+        const glowGrad = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowRadius);
+        glowGrad.addColorStop(0, `rgba(${star.color}, ${0.4 + star.glowIntensity * 0.4})`);
+        glowGrad.addColorStop(0.4, `rgba(${star.color}, ${0.1 + star.glowIntensity * 0.15})`);
+        glowGrad.addColorStop(1, `rgba(${star.color}, 0)`);
+        ctx.fillStyle = glowGrad;
         ctx.beginPath();
-        ctx.arc(0, 0, 1, 0, Math.PI * 2);
+        ctx.arc(sx, sy, glowRadius, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
 
         // 星点本体
         ctx.fillStyle = `rgba(${star.color}, ${0.85 + star.glowIntensity * 0.15})`;
@@ -246,20 +226,12 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
         }
       }
 
-      // 更新 hovered 状态：用 ref 比较，悬停切换不再重启整个绘制循环
-      if (hovered !== hoveredStarRef.current) {
-        hoveredStarRef.current = hovered;
+      // 更新 hovered 状态
+      if (hovered !== hoveredStar) {
         setHoveredStar(hovered);
       }
       if (hovered) {
-        // tooltip 位置节流：位置没变（>1px）就不触发 React 重渲染
-        const tx = hovered.x + offsetX;
-        const ty = hovered.y + offsetY;
-        const last = lastTooltipPosRef.current;
-        if (Math.abs(tx - last.x) > 1 || Math.abs(ty - last.y) > 1) {
-          lastTooltipPosRef.current = { x: tx, y: ty };
-          setTooltipPos({ x: tx, y: ty });
-        }
+        setTooltipPos({ x: hovered.x + offsetX, y: hovered.y + offsetY });
       }
 
       animFrameRef.current = requestAnimationFrame(draw);
@@ -267,7 +239,7 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
 
     draw();
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [dims]);
+  }, [dims, hoveredStar]);
 
   // 鼠标事件
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -324,7 +296,6 @@ export default function StarMapCanvas({ stars }: { stars: StarItem[] }) {
     mouseRef.current.x = -999;
     mouseRef.current.y = -999;
     mouseRef.current.isDown = false;
-    hoveredStarRef.current = null;
     setHoveredStar(null);
   }, []);
 

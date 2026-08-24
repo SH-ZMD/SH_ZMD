@@ -4,12 +4,11 @@ import matter from 'gray-matter';
 import Navbar from '../../components/Navbar';
 import PageTransition from '../../components/PageTransition';
 import ChatterBoard from './ChatterBoard';
-import { siteConfig } from '../../siteConfig';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: `杂谈 | ${siteConfig.title}`,
+  title: "杂谈 | XingHuiSama の 博客",
   description: "日常碎片与灵感记录",
 };
 

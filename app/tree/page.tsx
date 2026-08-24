@@ -2,7 +2,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import CreativeWorkshopClient from './CreativeWorkshopClient';
-import { siteConfig } from '../../siteConfig';
 
 type WorkshopItem = {
   id: string;
@@ -45,11 +44,6 @@ function readMoments() {
   if (!fs.existsSync(directory)) return [];
   return fs.readdirSync(directory).filter((name) => name.endsWith('.md')).map((name) => parseItem(path.join(process.cwd(), 'moments', name), name, 'moment'));
 }
-
-export const metadata = {
-  title: `灵境 | ${siteConfig.title}`,
-  description: "记忆炼金室与帝江号舰船——灵感与作品的封存之地",
-};
 
 export default function CreativeWorkshopPage() {
   return <CreativeWorkshopClient posts={readPosts()} chatters={readChatters()} moments={readMoments()} />;

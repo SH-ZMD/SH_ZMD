@@ -53,6 +53,3 @@ __pycache__/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# local-only CMS tooling (not deployed)
-/cms_core/

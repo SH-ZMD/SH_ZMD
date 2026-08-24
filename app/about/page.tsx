@@ -1,5 +1,3 @@
-import 'katex/dist/katex.min.css';
-
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -15,7 +13,6 @@ import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
-import { rehypeLazyImages } from '../../lib/rehypeLazyImages';
 import rehypeStringify from 'rehype-stringify';
 import rehypeKatex from 'rehype-katex';
 import 'highlight.js/styles/atom-one-dark.css';
@@ -51,15 +48,10 @@ function getDirActivities(dirName: string, typeLabel: '文章' | '杂谈' | '说
   });
 }
 
-export const metadata = {
-  title: `关于 | ${siteConfig.title}`,
-  description: siteConfig.bio,
-};
-
 export default async function AdminAboutPage() {
   const fullPath = path.join(process.cwd(), 'app', 'about', 'about.md');
   let contentHtml = "博主很懒，还没有写自我介绍哦...";
-  let coverImage = "/bg/about-cover.webp";
+  let coverImage = "https://bu.dusays.com/2026/03/24/69c23dc278c78.jpg";
 
   try {
     const fileContents = fs.readFileSync(fullPath, 'utf8');
@@ -104,7 +96,6 @@ export default async function AdminAboutPage() {
       })
       .use(rehypeKatex)
       .use(rehypeSanitize, markdownSanitizeSchema)
-    .use(rehypeLazyImages)
       .use(rehypeStringify)
       .process(content);
 

@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     if (process.env.PRIMARY_DOMAIN_READY !== "true") return [];
-    return [{ source: "/:path*", has: [{ type: "host", value: "sh-zmd-sh-zmd-s-projects.vercel.app" }], destination: "https://5487210.xyz/:path*", permanent: true }];
+    return [{ source: "/:path*", has: [{ type: "host", value: "sh-zmd.vercel.app" }], destination: "https://www.xinghuisama.top/:path*", permanent: true }];
   },
   async headers() {
     const contentSecurityPolicy = [

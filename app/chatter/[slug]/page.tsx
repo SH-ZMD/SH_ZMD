@@ -1,5 +1,3 @@
-import 'katex/dist/katex.min.css';
-
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -14,7 +12,6 @@ import remarkRehype from 'remark-rehype';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
-import { rehypeLazyImages } from '../../../lib/rehypeLazyImages';
 import rehypeStringify from 'rehype-stringify';
 import rehypeKatex from 'rehype-katex';
 
@@ -96,7 +93,6 @@ async function getChatterData(slug: string) {
     })
     .use(rehypeKatex)
     .use(rehypeSanitize, markdownSanitizeSchema)
-    .use(rehypeLazyImages)
     .use(rehypeStringify)
     .process(content);
 

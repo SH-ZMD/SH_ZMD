@@ -67,7 +67,7 @@ export default function FriendsBoard() {
         id: `friend_${Date.now()}`,
         name: data.name!,
         url: data.url!,
-        avatar: data.avatar || '/image/face.jpg',
+        avatar: data.avatar || 'https://bu.dusays.com/2026/03/24/69c1e38b4c370.jpg',
         description: data.description || '这位朋友很神秘，什么都没写。',
         themeColor: data.themeColor || '#6366f1'
       };
