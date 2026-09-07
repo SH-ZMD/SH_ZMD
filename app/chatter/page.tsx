@@ -8,7 +8,7 @@ import ChatterBoard from './ChatterBoard';
 export const dynamic = 'force-dynamic';
 
 export const metadata = {
-  title: "杂谈 | XingHuiSama の 博客",
+  title: "杂谈 | SH_ZMD の 博客",
   description: "日常碎片与灵感记录",
 };
 
