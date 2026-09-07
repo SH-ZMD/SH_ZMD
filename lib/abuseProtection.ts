@@ -27,6 +27,10 @@ function localRateLimit(rule: RateRule) {
   if (active.length >= rule.limit) return Math.max(1, Math.ceil((windowMs - (now - active[0])) / 1000));
   active.push(now); localWindows.set(key, active); return 0;
 }
+// 音乐批量解析等只读接口用的轻量限流（仅本地窗口，不查 Redis）
+export function checkLocalRateLimit(name: string, identity: string, limit: number, windowSeconds: number) {
+  return localRateLimit({ name, identity, limit, windowSeconds });
+}
 async function durableRateLimit(rule: RateRule) {
   const url = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || '').replace(/\/$/, '');
   const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || '';
