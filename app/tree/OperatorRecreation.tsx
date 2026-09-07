@@ -77,7 +77,7 @@ export default function OperatorRecreation() {
           style={{ x: bgTranslateX }}
           className="absolute top-0 left-[-10%] w-[120%] h-[80%] z-0 pointer-events-none"
         >
-          <img src="/recreation-bg.png" alt="Background" className="w-full h-full object-cover object-top" />
+          <img src="/recreation-bg.webp" alt="Background" className="w-full h-full object-cover object-top" />
         </motion.div>
 
         {/* 氛围遮罩 */}
@@ -85,7 +85,7 @@ export default function OperatorRecreation() {
 
         {/* 前景层 */}
         <div className="absolute inset-0 z-[10] flex items-end justify-center pointer-events-none">
-          <img src="/recreation-fg.png" alt="Foreground" className="w-auto h-full object-contain object-bottom" />
+          <img src="/recreation-fg.webp" alt="Foreground" className="w-auto h-full object-contain object-bottom" />
         </div>
 
         {/* === 🌟 核心分层架构：移动控制层 === */}
