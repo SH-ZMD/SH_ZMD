@@ -1,27 +1,6 @@
 {
   "items": [
     {
-      "id": "775b2128-419b-47ad-9fb1-7075f934c5bc",
-      "name": "云舟AI",
-      "url": "https://cli.999554.xyz/register?aff=p95d",
-      "status": "active",
-      "score": 80,
-      "tags": [
-        "0.08-0.1倍率"
-      ],
-      "note": "价格：0.08或0.1，缓存率一般，总体中规中矩\n速度：75\n稳定性：75\n推荐是因为站长是我好朋友，这么久了没掺过水比较相信他（",
-      "markedFields": [],
-      "health": {
-        "state": "unknown",
-        "checkedAt": null,
-        "latencyMs": null,
-        "statusCode": null,
-        "message": "尚未检测"
-      },
-      "createdAt": 1782575160414,
-      "updatedAt": 1788879115252
-    },
-    {
       "id": "keyurl_1788878892505_a3jt5",
       "name": "LLM Free",
       "url": "https://llmfree.work/register?aff=3UEKUH2RABYX",
@@ -40,7 +19,7 @@
         "message": "尚未检测"
       },
       "createdAt": 1788878892505,
-      "updatedAt": 1788879115252
+      "updatedAt": 1789392214142
     },
     {
       "id": "keyurl_1788879025849_x172y",
@@ -59,8 +38,29 @@
         "message": "尚未检测"
       },
       "createdAt": 1788879025849,
-      "updatedAt": 1788879115252
+      "updatedAt": 1789392214142
+    },
+    {
+      "id": "keyurl_1789392057933_r6l64",
+      "name": "Apx",
+      "url": "https://apxrelay.com/register?invite=QDD6V4PYMMFA",
+      "status": "active",
+      "score": 80,
+      "tags": [
+        "完全满血但0.2倍率，纯满血"
+      ],
+      "note": "纯满血，如果说全网有哪个站是真的纯满血，那就是这个了。目前倍率，还是比较贵的，但是是纯满血（penai给多ip并发自动降智，所以用别的站点虽然站长没给你掺水，也想让你用满血，但是openai不让。但是这个开发了新的方法，单账号单ip轮询，通过提升成本来保证满血）",
+      "markedFields": [],
+      "health": {
+        "state": "unknown",
+        "checkedAt": null,
+        "latencyMs": null,
+        "statusCode": null,
+        "message": "尚未检测"
+      },
+      "createdAt": 1789392057933,
+      "updatedAt": 1789392214142
     }
   ],
-  "updatedAt": 1788879115252
+  "updatedAt": 1789392214142
 }
