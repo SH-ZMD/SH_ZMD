@@ -17,7 +17,7 @@ export default function SplashScreen() {
       setShow(true);
       const timer = setTimeout(() => {
         exitSplash();
-      }, 800);
+      }, 200);
       return () => clearTimeout(timer);
     } else {
       // 容错处理：确保直接访问时类名存在
@@ -40,7 +40,7 @@ export default function SplashScreen() {
         <motion.div
           key="splash-screen-container"
           exit={{ opacity: 0, scale: 1.1, filter: "blur(20px)" }}
-          transition={{ duration: 0.35, ease: "easeOut" }}
+          transition={{ duration: 0.15, ease: "easeOut" }}
           className="fixed inset-0 z-[100000] flex flex-col items-center justify-center bg-white dark:bg-slate-950"
         >
           <div className="relative z-10 flex flex-col items-center">
@@ -65,7 +65,7 @@ export default function SplashScreen() {
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 1.1, ease: "easeOut" }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
                 className="absolute top-0 left-0 h-full bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.8)]"
               />
             </div>
