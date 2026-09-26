@@ -3,6 +3,7 @@ import path from 'path';
 import matter from 'gray-matter';
 
 import Navbar from '../components/Navbar';
+import PageTransition from '../components/PageTransition';
 import SearchBar from '../components/SearchBar';
 import { siteConfig } from '../siteConfig';
 import CloudPlayer from '../components/CloudPlayer';
@@ -137,7 +138,8 @@ export default function Home() {
     <ToastProvider>
       <div className="min-h-screen relative pb-10">
         <Navbar />
-        <div className="w-full max-w-6xl mx-auto mt-28 px-4 sm:px-10 relative z-10">
+        <PageTransition>
+          <div className="w-full max-w-6xl mx-auto mt-28 px-4 sm:px-10 relative z-10">
             <SearchBar posts={allPosts} />
 
             <main className="flex flex-col gap-6 w-full">
@@ -175,7 +177,8 @@ export default function Home() {
               {/* 底部数据面板 */}
               <div className="w-full mt-2"><SiteDashboard/></div>
             </main>
-        </div>
+          </div>
+        </PageTransition>
       </div>
     </ToastProvider>
   );
