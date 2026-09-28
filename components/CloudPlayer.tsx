@@ -1,4 +1,5 @@
 ﻿"use client";
+import { track } from '@vercel/analytics';
 import { useEffect, useState } from 'react';
 import { useMusic } from './MusicProvider';
 // 🌟 核心引入：Next.js 路由钩子
@@ -48,7 +49,7 @@ export default function CloudPlayer() {
     return (
       <button
         type="button"
-        onClick={() => ensurePlaylistReady()}
+        onClick={() => { ensurePlaylistReady(); track('music_load'); }}
         className="h-full w-full rounded-3xl bg-white/40 dark:bg-slate-800/50 backdrop-blur-md border border-white/40 dark:border-white/10 shadow-xl p-6 flex flex-col items-center justify-center transition-all duration-700 hover:scale-[1.02] cursor-pointer"
       >
         <div className="w-16 h-16 mb-4 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center shadow-inner opacity-50">
