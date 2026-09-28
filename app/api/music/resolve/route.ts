@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { checkLocalRateLimit, getRequestIp } from '../../../../lib/abuseProtection';
 
 const METING_APIS = [
   'https://meting-api.saop.cc/api',
@@ -7,14 +6,14 @@ const METING_APIS = [
   'https://meting-api.9887665.xyz/api',
   'https://api.injahow.cn/meting/',
 ];
-const PRODUCTION_MUSIC_API = 'https://5487210.xyz/api/music/resolve';
+const PRODUCTION_MUSIC_API = 'https://sh-zmd.vercel.app/api/music/resolve';
 
 function normalizeSong(song: any, id: string) {
   return {
     id: String(song.id || id),
     title: song.name || song.title || '未知歌曲',
     artist: song.author || song.artist || '未知歌手',
-    cover: song.pic || song.cover || '/bg/music-default.webp',
+    cover: song.pic || song.cover || 'https://bu.dusays.com/2026/03/24/69c24230a5ff8.jpg',
     src: song.url || song.src || '',
     lrcUrl: song.lrc || song.lrcUrl || '',
   };
@@ -69,15 +68,6 @@ export async function GET(req: Request) {
 
   if (!/^\d+$/.test(id)) {
     return NextResponse.json({ error: '歌曲 ID 不正确' }, { status: 400 });
-  }
-
-  // 轻量防刷：同 IP 每分钟最多 40 次解析，避免第三方音源 API 配额被滥用
-  const waitSeconds = checkLocalRateLimit('music-resolve', getRequestIp(req), 40, 60);
-  if (waitSeconds > 0) {
-    return NextResponse.json(
-      { error: '解析请求过于频繁，请稍后再试。' },
-      { status: 429, headers: { 'Retry-After': String(waitSeconds) } }
-    );
   }
 
   for (const api of METING_APIS) {

@@ -12,6 +12,26 @@ export const metadata = {
   description: "日常碎片与灵感记录",
 };
 
+// 列表卡片只展示纯文本摘要，避免 ###、**、![]() 这类标记直接露在卡片上
+function toPlainExcerpt(markdown: string, maxLength = 200) {
+  const text = markdown
+    .replace(/^\s{0,3}#{1,6}\s+.*(\n|$)/, '')      // 去掉正文第一个标题（与文章标题重复）
+    .replace(/```[\s\S]*?```/g, ' ')            // 代码块
+    .replace(/~~~[\s\S]*?~~~/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')       // 图片
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')     // 链接保留文字
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')            // 其余标题标记
+    .replace(/^\s{0,3}>\s?/gm, '')                 // 引用标记
+    .replace(/^\s{0,3}([-*+]|\d+[.)])\s+/gm, '')  // 列表标记
+    .replace(/^\s*\|.*\|\s*$/gm, ' ')            // 表格行
+    .replace(/^\s*[-:|\s]{3,}$/gm, ' ')
+    .replace(/[*_`~]/g, '')                        // 强调符
+    .replace(/<[^>]*>/g, ' ')                       // 行内 HTML
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > maxLength ? `${text.slice(0, maxLength)}…` : text;
+}
+
 export default function ChatterPage() {
   const chattersDirectory = path.join(process.cwd(), 'chatters');
   let chatters: any[] = [];
@@ -36,7 +56,7 @@ export default function ChatterPage() {
         mood: data.mood || '',
         cover: data.cover || '',
         hidden: data.hidden === true,
-        content: content.replace(/^#+ .*\n/m, '')
+        content: toPlainExcerpt(content)
       };
     }).sort((a, b) => (new Date(b.date).getTime() - new Date(a.date).getTime()));
   } catch (e) {

@@ -200,112 +200,127 @@ export default async function ChatterDetail({ params }: { params: Promise<{ slug
 
               <div className="relative">
                 <style>{`
-                  .prose h1 { font-size: 1.8rem !important; font-weight: 900 !important; margin-bottom: 1.2rem !important; margin-top: 2rem !important; line-height: 1.3 !important; color: inherit !important; }
-                  .prose h2 { font-size: 1.5rem !important; font-weight: 800 !important; margin-bottom: 1rem !important; margin-top: 1.5rem !important; color: inherit !important; }
-                  .prose h3 { font-size: 1.2rem !important; font-weight: 700 !important; margin-bottom: 0.8rem !important; color: inherit !important; }
-                  .prose p { font-size: 0.95rem !important; line-height: 1.75 !important; color: inherit !important; }
-                  
-                  .prose a { color: #6366f1 !important; text-decoration: none !important; font-weight: 600 !important; border-bottom: 1px dashed #6366f1 !important; transition: all 0.3s ease !important; }
-                  .prose a:hover { color: #4f46e5 !important; border-bottom-style: solid !important; background-color: rgba(99, 102, 241, 0.1) !important; padding: 0 0.2rem !important; border-radius: 0.2rem !important; }
+                  /* ============================================================
+                     杂谈详情页 · 正文排版基线（v2）
+                     用法：替换 app/chatter/[slug]/page.tsx 中 style 标签内的 CSS
+                     要点：
+                     1. 原样式里 .prose p 只有字号和行高、没有 margin，段落之间完全没有间距，
+                        所以作者只能用「空格 + 零宽字符」的空行来手工撑开距离——这是“排版随意”的根因。
+                        这里补全段落/列表/图片/表格/提示块的垂直节奏。
+                     2. 正文标题原本 h1=3rem、h2=2.2rem，且文章内部大量使用一级标题，
+                        导致正文出现和文章大标题一样大的字号。这里把正文层级收敛到 h2/h3/h4。
+                     3. 引用块原先是斜体，中文斜体是伪倾斜，观感很随意；改为正体并统一左右留白。
+                     ============================================================ */
+
+                  /* ---------- 段落节奏 ---------- */
+                  .prose p { font-size: 1.05rem !important; line-height: 1.9 !important; margin: 1.05rem 0 !important; color: inherit !important; }
+
+                  /* ---------- 标题层级（正文最多四级） ---------- */
+                  .prose h1 { font-size: 1.6rem !important; font-weight: 900 !important; margin: 2.25rem 0 1rem !important; line-height: 1.4 !important; color: inherit !important; }
+                  .prose h2 { font-size: 1.45rem !important; font-weight: 900 !important; margin: 2.6rem 0 1.05rem !important; line-height: 1.45 !important; color: inherit !important; padding-left: .8rem !important; border-left: 5px solid rgba(99, 102, 241, .55) !important; }
+                  .prose h3 { font-size: 1.2rem !important; font-weight: 800 !important; margin: 1.9rem 0 .85rem !important; line-height: 1.5 !important; color: inherit !important; }
+                  .prose h4 { font-size: 1.1rem !important; font-weight: 800 !important; margin: 1.5rem 0 .6rem !important; line-height: 1.6 !important; color: inherit !important; }
+                  .dark .prose h2 { border-left-color: rgba(129, 140, 248, .7) !important; }
+
+                  /* 首尾元素不收边，避免文章顶部/底部出现莫名留白 */
+                  .prose > :first-child { margin-top: 0 !important; }
+                  .prose > :last-child { margin-bottom: 0 !important; }
+
+                  /* ---------- 列表 ---------- */
+                  .prose ul, .prose ol { margin: 1.05rem 0 !important; padding-left: 1.6rem !important; font-size: 1.05rem !important; }
+                  .prose ul { list-style-type: disc !important; }
+                  .prose ol { list-style-type: decimal !important; }
+                  .prose li { display: list-item !important; margin: .5rem 0 !important; line-height: 1.85 !important; }
+                  .prose li > p { margin: .4rem 0 !important; }
+                  .prose li::marker { color: #6366f1 !important; font-weight: 700 !important; }
+                  .prose ul ul, .prose ol ul { list-style-type: circle !important; margin: .3rem 0 !important; }
+                  .prose ol ol, .prose ul ol { list-style-type: lower-alpha !important; margin: .3rem 0 !important; }
+
+                  /* ---------- 链接 ---------- */
+                  .prose a { color: #6366f1 !important; text-decoration: none !important; font-weight: 600 !important; border-bottom: 1px dashed #6366f1 !important; transition: all .3s ease !important; }
+                  .prose a:hover { color: #4f46e5 !important; border-bottom-style: solid !important; background-color: rgba(99, 102, 241, .1) !important; padding: 0 .2rem !important; border-radius: .2rem !important; }
                   .dark .prose a { color: #818cf8 !important; border-bottom-color: #818cf8 !important; }
-                  .dark .prose a:hover { color: #a5b4fc !important; background-color: rgba(129, 140, 248, 0.15) !important; }
+                  .dark .prose a:hover { color: #a5b4fc !important; background-color: rgba(129, 140, 248, .15) !important; }
 
-                  .prose ul { list-style-type: disc !important; padding-left: 1.5rem !important; font-size: 0.95rem !important; }
-                  .prose ol { list-style-type: decimal !important; padding-left: 1.5rem !important; font-size: 0.95rem !important; }
-                  .prose li { display: list-item !important; margin-bottom: 0.5rem !important; }
-                  
-                  .prose ul ul, .prose ol ul { list-style-type: circle !important; margin-top: 0.25rem !important; margin-bottom: 0.25rem !important; }
-                  .prose ol ol, .prose ul ol { list-style-type: lower-alpha !important; margin-top: 0.25rem !important; margin-bottom: 0.25rem !important; }
-                  
-                  /* 🌟 删除线强制展现 */
-                  .prose s, .prose del { text-decoration-line: line-through !important; opacity: 0.6; }
+                  /* ---------- 强调 ---------- */
+                  .prose strong { font-weight: 800 !important; color: inherit !important; }
+                  .prose s, .prose del { text-decoration-line: line-through !important; opacity: .6; }
 
-                  /* 🌟 引用块专属果冻极客风样式补丁 */
+                  /* ---------- 提示块（引用） ---------- */
                   .prose blockquote {
                     border-left: 4px solid #6366f1 !important;
-                    background-color: rgba(99, 102, 241, 0.05) !important;
-                    padding: 1rem 1.5rem !important;
+                    background-color: rgba(99, 102, 241, .055) !important;
+                    padding: .95rem 1.3rem !important;
                     margin: 1.5rem 0 !important;
-                    border-radius: 0 1.25rem 1.25rem 0 !important;
-                    font-style: italic !important;
-                    color: #64748b !important;
-                    quotes: none !important; /* 强制移除 Tailwind 原生的丑陋大引号 */
-                  }
-                  .prose blockquote p {
-                    margin: 0 !important; 
+                    border-radius: 0 1rem 1rem 0 !important;
+                    font-style: normal !important;
                     color: inherit !important;
+                    quotes: none !important;
                   }
-                  /* 🌟 彻底杀掉 Tailwind Typography 生成的前后伪元素引号！ */
-                  .prose blockquote p::before,
-                  .prose blockquote p::after {
-                    display: none !important;
-                    content: none !important;
-                  }
-                  
-                  .dark .prose blockquote {
-                    border-left-color: #818cf8 !important;
-                    background-color: rgba(129, 140, 248, 0.1) !important;
-                    color: #94a3b8 !important;
-                  }
-                  
-                  /* 🌟 果冻极客风代码字体 */
-                  .prose pre {
-                    background-color: #282c34 !important; color: #abb2bf !important;
-                    padding: 1rem !important; border-radius: 1.25rem !important;
-                    overflow-x: auto !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.3) !important;
-                    margin-top: 1rem !important; margin-bottom: 1rem !important;
-                  }
-                  
-                  .prose pre code, .prose p code, .prose li code { 
-                    font-family: ui-rounded, 'Quicksand', 'Nunito', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace !important;
-                    font-variant-ligatures: contextual !important;
-                    font-weight: 500 !important;
-                    letter-spacing: 0.02em !important;
-                  }
-                  
-                  .prose pre code { 
-                    background-color: transparent !important; 
-                    padding: 0 !important; 
-                    color: inherit !important; 
-                    font-size: 0.85em !important; 
-                  }
-                  
+                  .prose blockquote p { margin: .5rem 0 !important; font-size: 1rem !important; line-height: 1.85 !important; color: inherit !important; }
+                  .prose blockquote > :first-child { margin-top: 0 !important; }
+                  .prose blockquote > :last-child { margin-bottom: 0 !important; }
+                  .prose blockquote strong { color: #4f46e5 !important; }
+                  .prose blockquote p::before, .prose blockquote p::after { display: none !important; content: none !important; }
+                  .dark .prose blockquote { border-left-color: #818cf8 !important; background-color: rgba(129, 140, 248, .1) !important; }
+                  .dark .prose blockquote strong { color: #a5b4fc !important; }
+
+                  /* ---------- 代码 ---------- */
+                  .prose pre { background-color: #282c34 !important; color: #abb2bf !important; padding: 1.1rem !important; border-radius: 1rem !important; overflow-x: auto !important; box-shadow: inset 0 0 10px rgba(0, 0, 0, .3) !important; margin: 1.5rem 0 !important; }
+                  .prose pre code, .prose p code, .prose li code { font-family: ui-rounded, 'Quicksand', 'Nunito', 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', Menlo, Monaco, Consolas, monospace !important; font-variant-ligatures: contextual !important; font-weight: 500 !important; letter-spacing: .02em !important; }
+                  .prose pre code { background-color: transparent !important; padding: 0 !important; color: inherit !important; font-size: .85em !important; }
                   .prose code::before, .prose code::after { content: none !important; }
-                  
-                  .prose p code, .prose li code { 
-                    background-color: rgba(99, 102, 241, 0.1) !important; color: #6366f1 !important; 
-                    padding: 0.2rem 0.4rem !important; border-radius: 0.5rem !important; font-size: 0.85em !important; 
-                  }
-                  .dark .prose p code, .dark .prose li code { background-color: rgba(99, 102, 241, 0.2) !important; color: #818cf8 !important; }
-                  
-                  /* 🌟 确保前台生成的 <br> 占据真实的垂直空间 */
-                  .prose br { display: block !important; content: "" !important; margin-top: 0.5em !important; }
+                  .prose p code, .prose li code { background-color: rgba(99, 102, 241, .1) !important; color: #5b5fc7 !important; padding: .15rem .4rem !important; border-radius: .4rem !important; font-size: .88em !important; }
+                  .dark .prose p code, .dark .prose li code { background-color: rgba(99, 102, 241, .2) !important; color: #a5b4fc !important; }
 
-                  .prose img { display: block !important; margin: 1.5rem auto !important; border-radius: 1rem !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important; max-width: 100% !important; height: auto !important; }
+                  /* ---------- 图片：独占一行，上下留白一致 ---------- */
+                  .prose img { display: block !important; margin: 1.6rem auto !important; border-radius: 1rem !important; box-shadow: 0 10px 30px rgba(0, 0, 0, .1) !important; max-width: 100% !important; height: auto !important; }
+                  .prose li img { margin: .85rem auto !important; border-radius: .75rem !important; }
 
-                  /* 🌟 Atom One Dark 顶级补丁 */
+                  /* ---------- 表格（模型对比、模型推荐） ---------- */
+                  .prose table { width: 100% !important; border-collapse: separate !important; border-spacing: 0 !important; margin: 1.5rem 0 !important; font-size: 1rem !important; border: 1px solid rgba(99, 102, 241, .18) !important; border-radius: .9rem !important; overflow: hidden !important; }
+                  .prose thead { background-color: rgba(99, 102, 241, .09) !important; }
+                  .prose th { padding: .7rem .95rem !important; font-weight: 800 !important; text-align: left !important; border-bottom: 1px solid rgba(99, 102, 241, .22) !important; }
+                  .prose td { padding: .7rem .95rem !important; border-bottom: 1px solid rgba(100, 116, 139, .15) !important; vertical-align: top !important; line-height: 1.8 !important; }
+                  .prose tbody tr:last-child td { border-bottom: none !important; }
+                  .dark .prose table { border-color: rgba(129, 140, 248, .22) !important; }
+                  .dark .prose thead { background-color: rgba(129, 140, 248, .12) !important; }
+                  .dark .prose th { border-bottom-color: rgba(129, 140, 248, .25) !important; }
+                  .dark .prose td { border-bottom-color: rgba(148, 163, 184, .18) !important; }
+
+                  /* ---------- 分隔线 ---------- */
+                  .prose hr { border: none !important; height: 1px !important; width: 70% !important; margin: 2.5rem auto !important; background: linear-gradient(90deg, transparent, rgba(99, 102, 241, .45), transparent) !important; }
+
+                  /* ---------- Atom One Dark 代码高亮 ---------- */
                   .prose pre code .hljs-comment, .prose pre code .hljs-quote { color: #5c6370 !important; font-style: italic !important; }
                   .prose pre code .hljs-doctag, .prose pre code .hljs-keyword, .prose pre code .hljs-formula { color: #c678dd !important; }
-                  .prose pre code .hljs-keyword.type_, .prose pre code .hljs-type { color: #c678dd !important; } 
+                  .prose pre code .hljs-keyword.type_, .prose pre code .hljs-type { color: #c678dd !important; }
                   .prose pre code .hljs-section, .prose pre code .hljs-name, .prose pre code .hljs-selector-tag, .prose pre code .hljs-deletion, .prose pre code .hljs-subst { color: #e06c75 !important; }
                   .prose pre code .hljs-literal { color: #56b6c2 !important; }
                   .prose pre code .hljs-string, .prose pre code .hljs-regexp, .prose pre code .hljs-addition, .prose pre code .hljs-attribute, .prose pre code .hljs-meta-string { color: #98c379 !important; }
-                  .prose pre code .hljs-built_in, .prose pre code .hljs-class .hljs-title, .prose pre code .hljs-title.class_ { color: #e6c07b !important; } 
+                  .prose pre code .hljs-built_in, .prose pre code .hljs-class .hljs-title, .prose pre code .hljs-title.class_ { color: #e6c07b !important; }
                   .prose pre code .hljs-attr, .prose pre code .hljs-variable, .prose pre code .hljs-template-variable, .prose pre code .hljs-selector-class, .prose pre code .hljs-selector-attr, .prose pre code .hljs-selector-pseudo, .prose pre code .hljs-number { color: #d19a66 !important; }
-                  .prose pre code .hljs-symbol, .prose pre code .hljs-bullet, .prose pre code .hljs-link, .prose pre code .hljs-meta, .prose pre code .hljs-selector-id, .prose pre code .hljs-title, .prose pre code .hljs-title.function_ { color: #61aeee !important; } 
+                  .prose pre code .hljs-symbol, .prose pre code .hljs-bullet, .prose pre code .hljs-link, .prose pre code .hljs-meta, .prose pre code .hljs-selector-id, .prose pre code .hljs-title, .prose pre code .hljs-title.function_ { color: #61aeee !important; }
 
+                  /* ---------- 桌面端放大一档 ---------- */
                   @media (min-width: 768px) {
-                    .prose h1 { font-size: 3rem !important; font-weight: 950 !important; margin-bottom: 2rem !important; margin-top: 3rem !important; line-height: 1.1 !important; }
-                    .prose h2 { font-size: 2.2rem !important; margin-bottom: 1.5rem !important; margin-top: 2rem !important; }
-                    .prose h3 { font-size: 1.5rem !important; margin-bottom: 1rem !important; }
-                    .prose p { font-size: 1.15rem !important; line-height: 1.85 !important; }
-                    
-                    .prose ul, .prose ol { padding-left: 2rem !important; font-size: 1.1rem !important; }
-                    
-                    .prose pre { padding: 1.25rem !important; margin-top: 1.5rem !important; margin-bottom: 1.5rem !important; border-radius: 1.5rem !important; }
-                    .prose pre code { font-size: 0.9em !important; }
-                    .prose p code, .prose li code { padding: 0.2rem 0.4rem !important; font-size: 0.9em !important; border-radius: 0.375rem !important;}
-                    .prose img { margin: 2rem auto !important; border-radius: 2rem !important; box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important; }
+                    .prose p { font-size: 1.125rem !important; line-height: 1.95 !important; margin: 1.15rem 0 !important; }
+                    .prose h1 { font-size: 1.9rem !important; }
+                    .prose h2 { font-size: 1.65rem !important; margin: 3rem 0 1.15rem !important; }
+                    .prose h3 { font-size: 1.35rem !important; margin: 2.1rem 0 .9rem !important; }
+                    .prose h4 { font-size: 1.2rem !important; margin: 1.7rem 0 .65rem !important; }
+                    .prose ul, .prose ol { font-size: 1.125rem !important; padding-left: 1.8rem !important; }
+                    .prose li { margin: .55rem 0 !important; }
+                    .prose blockquote p { font-size: 1.06rem !important; }
+                    .prose table { font-size: 1.05rem !important; }
+                    .prose img { margin: 2rem auto !important; border-radius: 1.5rem !important; box-shadow: 0 20px 50px rgba(0, 0, 0, .15) !important; }
+                    .prose pre { padding: 1.25rem !important; margin: 1.75rem 0 !important; border-radius: 1.25rem !important; }
+                    .prose pre code { font-size: .9em !important; }
+                  }
+
+                  /* ---------- 窄屏：表格内部可横向滚动 ---------- */
+                  @media (max-width: 767px) {
+                    .prose table { display: block !important; overflow-x: auto !important; white-space: normal !important; border-radius: .75rem !important; }
                   }
                 `}</style>
 

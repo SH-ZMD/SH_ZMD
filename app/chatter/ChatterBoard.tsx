@@ -289,7 +289,7 @@ export default function ChatterBoard({ chatters: initialChatters }: { chatters: 
                     {chatter.title || "碎片笔记"}
                   </h3>
 
-                  <div className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-5 opacity-90 font-medium italic">
+                  <div className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-5 opacity-90 font-medium">
                     {chatter.content}
                   </div>
 
