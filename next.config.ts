@@ -8,12 +8,18 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     if (process.env.PRIMARY_DOMAIN_READY !== "true") return [];
-    return [{ source: "/:path*", has: [{ type: "host", value: "sh-zmd.vercel.app" }], destination: "https://www.xinghuisama.top/:path*", permanent: true }];
+    return [{ source: "/:path*", has: [{ type: "host", value: "sh-zmd-sh-zmd-s-projects.vercel.app" }], destination: "https://5487210.xyz/:path*", permanent: true }];
   },
   async headers() {
+    // 开发模式下 Next 用 eval-source-map 打包，模块靠 eval() 执行；
+    // 少了 'unsafe-eval' 会被 CSP 全部拦下，导致 React 无法 hydrate、整站空白。
+    const isDev = process.env.NODE_ENV === "development";
+    const scriptSrc = isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com"
+      : "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com";
     const contentSecurityPolicy = [
       "default-src 'self'", "base-uri 'self'", "frame-ancestors 'none'", "form-action 'self'", "object-src 'none'",
-      "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com", "style-src 'self' 'unsafe-inline'",
+      scriptSrc, "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:", "media-src 'self' blob: https:", "connect-src 'self' https:",
       "frame-src https://challenges.cloudflare.com", "font-src 'self' data:", "upgrade-insecure-requests",
     ].join('; ');
