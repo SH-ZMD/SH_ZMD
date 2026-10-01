@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { checkLocalRateLimit, getRequestIp } from '../../../lib/abuseProtection';
 
-// 移植自模板 XinghuisamaBlogs 0.3.2：一次请求批量解析网易云歌单，
+// 移植自模板 SH_ZMD_Blog 0.3.2：一次请求批量解析网易云歌单，
 // 直连网易云官方接口，替代浏览器逐首请求不稳定的第三方 meting 源。
 const NET_EASE_HEADERS = {
   'User-Agent':
