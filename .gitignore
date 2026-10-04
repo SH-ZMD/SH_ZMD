@@ -33,6 +33,7 @@ yarn-error.log*
 backend.dev*.log
 frontend.dev*.log
 public/backend_config.json
+.manager-instance.lock
 
 # python cache / local runtime
 __pycache__/

@@ -44,7 +44,8 @@ const mojibakePatterns = [
 
 const publicNavbarFile = fs.existsSync(path.join(root, 'components/Navbar.public.tsx')) ? 'components/Navbar.public.tsx' : 'components/Navbar.tsx';
 const publicPhotoWallFile = fs.existsSync(path.join(root, 'app/photowall/page.public.tsx')) ? 'app/photowall/page.public.tsx' : 'app/photowall/page.tsx';
-const isManagerSource = fs.existsSync(path.join(root, 'components/Navbar.public.tsx')) || fs.existsSync(path.join(root, 'app/photowall/page.public.tsx'));
+const publicTimelineFile = fs.existsSync(path.join(root, 'app/timeline/page.public.tsx')) ? 'app/timeline/page.public.tsx' : 'app/timeline/page.tsx';
+const isManagerSource = fs.existsSync(path.join(root, 'cms_core/api/sync.py'));
 
 const publicRetiredFiles = [
   'app/drafts/page.tsx',
@@ -144,6 +145,7 @@ const requiredSyncFiles = [
 const requiredSyncSourceOverrides = new Map([
   ['next.config.ts', 'next.config.public.ts'],
   ['app/photowall/page.tsx', 'app/photowall/page.public.tsx'],
+  ['app/timeline/page.tsx', 'app/timeline/page.public.tsx'],
   ['components/Navbar.tsx', 'components/Navbar.public.tsx'],
 ]);
 
@@ -155,6 +157,7 @@ const requiredSourceFileChecks = [
   'app/key-urls/page.tsx',
   'components/KeyUrlPublicTable.tsx',
   'app/photowall/page.tsx',
+  'app/timeline/page.tsx',
   'app/moments/MomentList.tsx',
   'app/chatter/ChatterBoard.tsx',
   'app/friends/FriendsBoard.tsx',
@@ -188,6 +191,17 @@ const interfaceChecks = [
     file: publicPhotoWallFile,
     required: ['notFound()'],
     forbidden: ['PhotoWallPage', '创建新相册', '添加碎片', 'useOperations'],
+  },
+  {
+    file: publicTimelineFile,
+    required: ['ArchiveCollectionsClient', 'archive-collections.json'],
+    forbidden: ['TimelineClient', 'readManagedPosts'],
+  },
+  {
+    file: 'app/timeline/page.tsx',
+    managerOnly: true,
+    required: ['ArchiveCollectionsClient', '<TimelineClient posts={posts} tags={tags} />', '<LocalManagerOnly>', "path.join(process.cwd(), 'posts')", 'hidden: data.hidden === true'],
+    forbidden: [],
   },
   {
     file: 'app/moments/MomentList.tsx',
@@ -488,6 +502,24 @@ for (const check of interfaceChecks) {
 }
 
 if (isManagerSource) {
+  const managerNavbarText = read('components/Navbar.tsx');
+  const managerNavbarRequired = ["href: '/settings'", "href: '/drafts'", "href: '/photowall'", "href: '/workbench'", "import PendingOperationsInbox from './PendingOperationsInbox'", '<PendingOperationsInbox />'];
+  const missingManagerNavbarMarkers = managerNavbarRequired.filter((marker) => !managerNavbarText.includes(marker));
+  if (missingManagerNavbarMarkers.length) {
+    failures.push(`components/Navbar.tsx is missing local management controls: ${missingManagerNavbarMarkers.join(', ')}`);
+  } else {
+    console.log('MANAGER NAV OK: local routes and pending inbox are attached');
+  }
+
+  const managerPhotoWallText = read('app/photowall/page.tsx');
+  const managerPhotoWallRequired = ['PhotoWallPage', '创建新相册', '添加碎片', 'sync_photowall', 'markPublishStateDirty'];
+  const missingManagerPhotoWallMarkers = managerPhotoWallRequired.filter((marker) => !managerPhotoWallText.includes(marker));
+  if (missingManagerPhotoWallMarkers.length || managerPhotoWallText.includes('notFound()')) {
+    failures.push(`app/photowall/page.tsx must retain local photo management: ${missingManagerPhotoWallMarkers.join(', ')}`);
+  } else {
+    console.log('MANAGER PHOTOWALL OK: local photo management is retained');
+  }
+
   const settingsFile = 'app/settings/page.tsx';
   const settingsText = read(settingsFile);
   const required = ["{ id: 'plans'", "{ id: 'recommendations'", "{ id: 'keyUrls'", 'mode="plans"', 'mode="recommendations"', 'KeyUrlTablesSection'];

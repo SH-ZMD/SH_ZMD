@@ -78,7 +78,15 @@ export function OperationProvider({ children }: { children: React.ReactNode }) {
 
     setOperations(prev => {
       // 如果是修改同一个文件，先过滤掉旧的，再加新的
-      const filtered = prev.filter(item => !(item.type === op.type && item.label === op.label));
+      const document = (op.value || op.payload) as { id?: string; draftId?: string; type?: string } | undefined;
+      const documentId = document?.id || document?.draftId;
+      const filtered = prev.filter(item => {
+        if (item.type !== op.type) return true;
+        if (op.type !== 'publish_article') return item.label !== op.label;
+        const previous = (item.value || item.payload) as typeof document;
+        return !documentId || documentId === 'new' ||
+          documentId !== (previous?.id || previous?.draftId) || document?.type !== previous?.type;
+      });
       return [...filtered, newOp];
     });
   };
