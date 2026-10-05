@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "kind": "blog-publish-manifest",
-  "updatedAt": "2026-10-04T22:44:29",
-  "fingerprint": "30cbb6ed3c5cb03c64ec8dce95aa6b46d7cfe694617dbeaf835478af0ebd4f0d",
-  "entryCount": 359,
+  "updatedAt": "2026-10-05T22:40:46",
+  "fingerprint": "9d195808ded35ada64bc6cd96f5f9b0c678fc5073d9078395a20c428e5bce942",
+  "entryCount": 368,
   "syncFiles": 71,
   "syncDirs": [
     "posts",
